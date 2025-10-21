@@ -1,4 +1,4 @@
-package sprint0_0.test;
+package sprint2_0.test;
 
 import org.junit.After;
 import org.junit.Before;
