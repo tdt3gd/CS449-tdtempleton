@@ -14,7 +14,7 @@ import javafx.stage.Stage;
 
 public class GUI extends Application {
 
-    private GameController controller;
+    private SOSGame game;
     private Console console;
 
     private ComboBox<Integer> boardSizeSelector = new ComboBox<>();
@@ -39,8 +39,8 @@ public class GUI extends Application {
 
     @Override
     public void start(Stage primaryStage) {
-        controller = new GameController(gridSize);
-        console = new Console(controller.getBoard());
+        game = new SimpleGame(gridSize);
+        console = new Console(game.getBoard());
         squares = new Square[gridSize][gridSize];
         drawNewBoard();
 
@@ -60,16 +60,30 @@ public class GUI extends Application {
         radioButton1.setMinWidth(100);
         radioButton2.setMinWidth(100);
         radioButton1.setSelected(true);
-        radioButton1.setOnAction(e -> controller.setGameMode(GameController.GameMode.SIMPLE));
-        radioButton2.setOnAction(e -> controller.setGameMode(GameController.GameMode.GENERAL));
+
+        radioButton1.setOnAction(e -> {
+            game = new SimpleGame(gridSize);
+            console = new Console(game.getBoard());
+            drawNewBoard();
+        });
+
+        radioButton2.setOnAction(e -> {
+            game = new GeneralGame(gridSize);
+            console = new Console(game.getBoard());
+            drawNewBoard();
+        });
 
         boardSizeSelector.getItems().addAll(3, 4, 5, 6, 7, 8);
         boardSizeSelector.setValue(gridSize);
         boardSizeSelector.setPrefWidth(60);
         boardSizeSelector.setOnAction(e -> {
             gridSize = boardSizeSelector.getValue();
-            controller = new GameController(gridSize);
-            console = new Console(controller.getBoard());
+            if (radioButton1.isSelected()) {
+                game = new SimpleGame(gridSize);
+            } else {
+                game = new GeneralGame(gridSize);
+            }
+            console = new Console(game.getBoard());
             drawNewBoard();
         });
 
@@ -138,7 +152,7 @@ public class GUI extends Application {
         for (int row = 0; row < gridSize; row++) {
             for (int column = 0; column < gridSize; column++) {
                 squares[row][column].getChildren().clear();
-                char cell = controller.getBoard().getCell(row, column);
+                char cell = game.getBoard().getCell(row, column);
                 if (cell == 'S') {
                     squares[row][column].drawCross();
                 } else if (cell == 'O') {
@@ -161,7 +175,7 @@ public class GUI extends Application {
     }
 
     private char getSelectedLetterForCurrentPlayer() {
-        return controller.getCurrentTurn() == 'X' ? (blueS.isSelected() ? 'S' : 'O') : (redS.isSelected() ? 'S' : 'O');
+        return game.getCurrentPlayer() == 'X' ? (blueS.isSelected() ? 'S' : 'O') : (redS.isSelected() ? 'S' : 'O');
     }
 
     public class Square extends Pane {
@@ -177,10 +191,14 @@ public class GUI extends Application {
 
         private void handleMouseClick() {
             char letter = getSelectedLetterForCurrentPlayer();
-            if (controller.makeMove(row, column, letter)) {
+            if (game.makeMove(row, column, letter)) {
                 drawBoard();
                 console.displayMove(row, column);
-                displayGameStatus();
+                if (game.isGameOver()) {
+                    gameStatus.setText("Game Over! Winner: " + game.getWinner());
+                } else {
+                    displayGameStatus();
+                }
             }
         }
 
@@ -203,7 +221,7 @@ public class GUI extends Application {
         }
 
         private void displayGameStatus() {
-            if (controller.getCurrentTurn() == 'X') {
+            if (game.getCurrentPlayer() == 'X') {
                 gameStatus.setText("Blue's Turn");
             } else {
                 gameStatus.setText("Red's Turn");
