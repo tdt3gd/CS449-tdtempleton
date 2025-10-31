@@ -1,9 +1,13 @@
 package sprint3_0.product;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public abstract class SOSGame {
     protected Board board;
-    protected char currentPlayer; // 'X' for Blue, 'O' for Red
+    protected char currentPlayer;
     protected int boardSize;
+    protected List<ScoredSequence> scoredSequences = new ArrayList<>();
 
     public SOSGame(int size) {
         if (size < 3 || size > 8) {
@@ -11,7 +15,7 @@ public abstract class SOSGame {
         }
         this.boardSize = size;
         this.board = new Board(size);
-        this.currentPlayer = 'X'; // Blue starts
+        this.currentPlayer = 'X';
     }
 
     public Board getBoard() {
@@ -30,14 +34,8 @@ public abstract class SOSGame {
         currentPlayer = (currentPlayer == 'X') ? 'O' : 'X';
     }
 
-    /**
-     * Attempts to make a move at the specified location with the given letter.
-     * Returns true if the move was successful, false otherwise.
-     */
     public boolean makeMove(int row, int col, char letter) {
-        if (row < 0 || row >= boardSize || col < 0 || col >= boardSize) {
-            return false;
-        }
+        if (row < 0 || row >= boardSize || col < 0 || col >= boardSize) return false;
         if (board.getCell(row, col) == '\0') {
             board.makeMove(row, col, letter, currentPlayer);
             return true;
@@ -45,33 +43,20 @@ public abstract class SOSGame {
         return false;
     }
 
-    /**
-     * Checks whether the game is over.
-     * Implemented differently in SimpleGame and GeneralGame.
-     */
-    public abstract boolean isGameOver();
+    public List<ScoredSequence> getScoredSequences() {
+        return scoredSequences;
+    }
 
-    /**
-     * Returns the winner of the game.
-     * "Blue", "Red", or "Draw"
-     */
-    public abstract String getWinner();
-
-    /**
-     * Utility method to check if an SOS is formed at a given cell.
-     * Used by both game types.
-     */
-    protected boolean isSOSFormed(int row, int col) {
+    protected List<ScoredSequence> findAllSOS(int row, int col) {
+        List<ScoredSequence> sequences = new ArrayList<>();
         char letter = board.getCell(row, col);
-        char player = board.getPlayer(row, col);
-        if (letter == '\0') return false;
+        if (letter != 'S') return sequences;
 
-        // Check all 8 directions for SOS pattern
         int[][] directions = {
-            {-1, 0}, {1, 0}, // vertical
-            {0, -1}, {0, 1}, // horizontal
-            {-1, -1}, {1, 1}, // diagonal \
-            {-1, 1}, {1, -1}  // diagonal /
+            {-1, 0}, {1, 0},     // vertical
+            {0, -1}, {0, 1},     // horizontal
+            {-1, -1}, {1, 1},    // diagonal UL-LR and LR-UL
+            {-1, 1}, {1, -1}     // diagonal UR-LL and LL-UR
         };
 
         for (int[] dir : directions) {
@@ -81,17 +66,18 @@ public abstract class SOSGame {
             int c2 = col + 2 * dir[1];
 
             if (isInBounds(r1, c1) && isInBounds(r2, c2)) {
-                char l1 = board.getCell(r1, c1);
-                char l2 = board.getCell(r2, c2);
-                if (letter == 'S' && l1 == 'O' && l2 == 'S') {
-                    return true;
+                if (board.getCell(r1, c1) == 'O' && board.getCell(r2, c2) == 'S') {
+                    sequences.add(new ScoredSequence(row, col, r2, c2, currentPlayer));
                 }
             }
         }
-        return false;
+        return sequences;
     }
 
     protected boolean isInBounds(int row, int col) {
         return row >= 0 && row < boardSize && col >= 0 && col < boardSize;
     }
+
+    public abstract boolean isGameOver();
+    public abstract String getWinner();
 }
