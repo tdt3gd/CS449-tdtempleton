@@ -17,7 +17,7 @@ public class GeneralGame extends SOSGame {
             List<ScoredSequence> newSequences = findAllSOS(row, col);
             if (!newSequences.isEmpty()) {
                 scoredSequences.addAll(newSequences);
-                if (currentPlayer == 'X') {
+                if (currentPlayer.equals("Blue")) {
                     blueScore += newSequences.size();
                 } else {
                     redScore += newSequences.size();
@@ -48,8 +48,8 @@ public class GeneralGame extends SOSGame {
         return "Draw";
     }
 
-    public int getScore(char player) {
-        return (player == 'X') ? blueScore : redScore;
+    public int getScore(String player) {
+        return player.equals("Blue") ? blueScore : redScore;
     }
 
     private boolean isBoardFull() {

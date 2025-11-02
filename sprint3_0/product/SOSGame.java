@@ -5,7 +5,7 @@ import java.util.List;
 
 public abstract class SOSGame {
     protected Board board;
-    protected char currentPlayer;
+    protected String currentPlayer;
     protected int boardSize;
     protected List<ScoredSequence> scoredSequences = new ArrayList<>();
 
@@ -15,14 +15,14 @@ public abstract class SOSGame {
         }
         this.boardSize = size;
         this.board = new Board(size);
-        this.currentPlayer = 'X';
+        this.currentPlayer = "Blue";
     }
 
     public Board getBoard() {
         return board;
     }
 
-    public char getCurrentPlayer() {
+    public String getCurrentPlayer() {
         return currentPlayer;
     }
 
@@ -31,7 +31,7 @@ public abstract class SOSGame {
     }
 
     public void switchPlayer() {
-        currentPlayer = (currentPlayer == 'X') ? 'O' : 'X';
+        currentPlayer = currentPlayer.equals("Blue") ? "Red" : "Blue";
     }
 
     public boolean makeMove(int row, int col, char letter) {

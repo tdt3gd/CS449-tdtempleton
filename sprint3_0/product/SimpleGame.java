@@ -17,7 +17,7 @@ public class SimpleGame extends SOSGame {
             if (!newSequences.isEmpty()) {
                 scoredSequences.addAll(newSequences);
                 gameOver = true;
-                winner = (currentPlayer == 'X') ? "Blue" : "Red";
+                winner = currentPlayer;
             } else if (isBoardFull()) {
                 gameOver = true;
                 winner = "Draw";

@@ -6,11 +6,7 @@ import javafx.geometry.Bounds;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Scene;
-import javafx.scene.control.CheckBox;
-import javafx.scene.control.ComboBox;
-import javafx.scene.control.Label;
-import javafx.scene.control.RadioButton;
-import javafx.scene.control.ToggleGroup;
+import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Line;
@@ -39,14 +35,15 @@ public class GUI extends Application {
     private RadioButton redO = new RadioButton("O");
 
     private int gridSize = 8;
-    private Pane lineLayer = new Pane();
     private GridPane boardPane = new GridPane();
+    private Pane lineLayer = new Pane();
     private CheckBox checkBox1 = new CheckBox("Enable AI");
+    private TextArea consoleOutput = new TextArea();
 
     @Override
     public void start(Stage primaryStage) {
         game = new SimpleGame(gridSize);
-        console = new Console(game.getBoard());
+        console = new Console(game.getBoard(), msg -> consoleOutput.appendText(msg + "\n"));
         squares = new Square[gridSize][gridSize];
         drawNewBoard();
 
@@ -69,13 +66,13 @@ public class GUI extends Application {
 
         radioButton1.setOnAction(e -> {
             game = new SimpleGame(gridSize);
-            console = new Console(game.getBoard());
+            console = new Console(game.getBoard(), msg -> consoleOutput.appendText(msg + "\n"));
             drawNewBoard();
         });
 
         radioButton2.setOnAction(e -> {
             game = new GeneralGame(gridSize);
-            console = new Console(game.getBoard());
+            console = new Console(game.getBoard(), msg -> consoleOutput.appendText(msg + "\n"));
             drawNewBoard();
         });
 
@@ -89,7 +86,7 @@ public class GUI extends Application {
             } else {
                 game = new GeneralGame(gridSize);
             }
-            console = new Console(game.getBoard());
+            console = new Console(game.getBoard(), msg -> consoleOutput.appendText(msg + "\n"));
             drawNewBoard();
         });
 
@@ -132,9 +129,7 @@ public class GUI extends Application {
 
         boardPane.setStyle("-fx-border-color: black; -fx-border-width: 2px;");
         boardPane.setPrefWidth(500);
-        HBox.setHgrow(boardPane, Priority.ALWAYS);
-
-        lineLayer.setPickOnBounds(false); // allow clicks to pass through
+        lineLayer.setPickOnBounds(false);
         StackPane boardStack = new StackPane(boardPane, lineLayer);
         boardStack.setPrefSize(500, 500);
         HBox.setHgrow(boardStack, Priority.ALWAYS);
@@ -148,29 +143,43 @@ public class GUI extends Application {
         statusBox.setAlignment(Pos.CENTER);
         statusBox.setPadding(new Insets(10));
 
+        consoleOutput.setEditable(false);
+        consoleOutput.setPrefHeight(120);
+        consoleOutput.setWrapText(true);
+        consoleOutput.setStyle("-fx-font-family: monospace; -fx-font-size: 12px;");
+        VBox bottomBox = new VBox(10, statusBox, consoleOutput);
+        bottomBox.setPadding(new Insets(10));
+
         BorderPane borderPane = new BorderPane();
         borderPane.setTop(controlBox);
         borderPane.setCenter(boardRow);
-        borderPane.setBottom(statusBox);
+        borderPane.setBottom(bottomBox);
 
-        Scene scene = new Scene(borderPane, 800, 600);
+        Scene scene = new Scene(borderPane, 800, 650);
         primaryStage.setTitle("SOS");
         primaryStage.setScene(scene);
         primaryStage.show();
     }
+    public void drawNewBoard() {
+        squares = new Square[gridSize][gridSize];
+        drawBoard();
+    }
 
     public void drawBoard() {
-    	boardPane.getChildren().clear();
-    	lineLayer.getChildren().clear();
+        boardPane.getChildren().clear();
+        lineLayer.getChildren().clear();
+
         for (int row = 0; row < gridSize; row++) {
-            for (int column = 0; column < gridSize; column++) {
-                squares[row][column] = new Square(row, column);
-                boardPane.add(squares[row][column], column, row);
-                char cell = game.getBoard().getCell(row, column);
+            for (int col = 0; col < gridSize; col++) {
+                Square square = new Square(row, col);
+                squares[row][col] = square;
+                boardPane.add(square, col, row);
+
+                char cell = game.getBoard().getCell(row, col);
                 if (cell == 'S') {
-                    squares[row][column].drawCross(); // or drawEss() if renamed later
+                    square.drawCross();
                 } else if (cell == 'O') {
-                    squares[row][column].drawNought();
+                    square.drawNought();
                 }
             }
         }
@@ -184,17 +193,7 @@ public class GUI extends Application {
         pause.play();
     }
 
-    public void drawNewBoard() {
-        squares = new Square[gridSize][gridSize];
-        drawBoard();
-    }
-
-    private char getSelectedLetterForCurrentPlayer() {
-        return game.getCurrentPlayer() == 'X' ? (blueS.isSelected() ? 'S' : 'O') : (redS.isSelected() ? 'S' : 'O');
-    }
-
-    private void drawLineBetweenSquares(int r1, int c1, int r2, int c2, char player) {
-    	
+    private void drawLineBetweenSquares(int r1, int c1, int r2, int c2, String player) {
         Square start = squares[r1][c1];
         Square end = squares[r2][c2];
 
@@ -207,63 +206,58 @@ public class GUI extends Application {
         double y2 = endBounds.getMinY() + endBounds.getHeight() / 2;
 
         Line line = new Line(x1, y1, x2, y2);
-        line.setStroke(player == 'X' ? Color.BLUE : Color.RED);
+        line.setStroke(player.equals("Blue") ? Color.BLUE : Color.RED);
         line.setStrokeWidth(4);
         lineLayer.getChildren().add(line);
-        System.out.printf("Line from (%d,%d) to (%d,%d) → (%.1f, %.1f) to (%.1f, %.1f)%n",
-        	    r1, c1, r2, c2, x1, y1, x2, y2);
     }
 
-    public class Square extends Pane {
-        private int row, column;
+    private class Square extends StackPane {
+        private final int row;
+        private final int col;
 
-        public Square(int row, int column) {
+        public Square(int row, int col) {
             this.row = row;
-            this.column = column;
-            setStyle("-fx-border-color: white");
-            this.setPrefSize(2000, 2000);
-            this.setOnMouseClicked(e -> handleMouseClick());
+            this.col = col;
+            setPrefSize(60, 60);
+            setStyle("-fx-border-color: black; -fx-background-color: white;");
+            setOnMouseClicked(e -> handleClick());
         }
 
-        private void handleMouseClick() {
+        private void handleClick() {
             if (game.isGameOver()) return;
 
             char letter = getSelectedLetterForCurrentPlayer();
-            if (game.makeMove(row, column, letter)) {
+            if (game.makeMove(row, col, letter)) {
                 drawBoard();
-                console.displayMove(row, column);
+                console.printMove(row, col);
                 if (game.isGameOver()) {
-                    gameStatus.setText("Game Over! Winner: " + game.getWinner());
+                    gameStatus.setText("Game Over: " + game.getWinner());
+                    console.printWinner(game.getWinner());
                 } else {
-                    displayGameStatus();
+                    gameStatus.setText(game.getCurrentPlayer() + "'s Turn");
                 }
             }
         }
 
+        private char getSelectedLetterForCurrentPlayer() {
+            String player = game.getCurrentPlayer();
+            if (player.equals("Blue")) {
+                return blueS.isSelected() ? 'S' : 'O';
+            } else {
+                return redS.isSelected() ? 'S' : 'O';
+            }
+        }
+
         public void drawCross() {
-            Label sLabel = new Label("S");
-            sLabel.setStyle("-fx-text-fill: black; -fx-font-size: 36px; -fx-font-weight: bold;");
-            StackPane stack = new StackPane(sLabel);
-            stack.prefWidthProperty().bind(this.widthProperty());
-            stack.prefHeightProperty().bind(this.heightProperty());
-            this.getChildren().add(stack);
+            Label label = new Label("S");
+            label.setStyle("-fx-font-size: 24px; -fx-text-fill: black;");
+            getChildren().add(label);
         }
 
         public void drawNought() {
-            Label oLabel = new Label("O");
-            oLabel.setStyle("-fx-text-fill: black; -fx-font-size: 36px; -fx-font-weight: bold;");
-            StackPane stack = new StackPane(oLabel);
-            stack.prefWidthProperty().bind(this.widthProperty());
-            stack.prefHeightProperty().bind(this.heightProperty());
-            this.getChildren().add(stack);
-        }
-
-        private void displayGameStatus() {
-            if (game.getCurrentPlayer() == 'X') {
-                gameStatus.setText("Blue's Turn");
-            } else {
-                gameStatus.setText("Red's Turn");
-            }
+            Label label = new Label("O");
+            label.setStyle("-fx-font-size: 24px; -fx-text-fill: black;");
+            getChildren().add(label);
         }
     }
 
