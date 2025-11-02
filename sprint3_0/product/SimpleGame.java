@@ -13,7 +13,7 @@ public class SimpleGame extends SOSGame {
     @Override
     public boolean makeMove(int row, int col, char letter) {
         if (super.makeMove(row, col, letter)) {
-            List<ScoredSequence> newSequences = findAllSOS(row, col);
+            List<ScoredSequence> newSequences = findAllSOS(row, col, currentPlayer);
             if (!newSequences.isEmpty()) {
                 scoredSequences.addAll(newSequences);
                 gameOver = true;

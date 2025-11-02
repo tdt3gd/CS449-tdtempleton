@@ -47,7 +47,7 @@ public abstract class SOSGame {
         return scoredSequences;
     }
 
-    protected List<ScoredSequence> findAllSOS(int row, int col) {
+    protected List<ScoredSequence> findAllSOS(int row, int col, String player) {
         List<ScoredSequence> sequences = new ArrayList<>();
         char letter = board.getCell(row, col);
         if (letter != 'S') return sequences;
@@ -67,7 +67,7 @@ public abstract class SOSGame {
 
             if (isInBounds(r1, c1) && isInBounds(r2, c2)) {
                 if (board.getCell(r1, c1) == 'O' && board.getCell(r2, c2) == 'S') {
-                    sequences.add(new ScoredSequence(row, col, r2, c2, currentPlayer));
+                    sequences.add(new ScoredSequence(row, col, r2, c2, player));
                 }
             }
         }
