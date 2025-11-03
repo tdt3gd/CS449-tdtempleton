@@ -39,6 +39,7 @@ public class GUI extends Application {
     private Pane lineLayer = new Pane();
     private CheckBox checkBox1 = new CheckBox("Enable AI");
     private TextArea consoleOutput = new TextArea();
+    private Button newGameButton = new Button("New Game");
 
     @Override
     public void start(Stage primaryStage) {
@@ -106,7 +107,6 @@ public class GUI extends Application {
         controlBox.setPadding(new Insets(10));
         controlBox.setPrefWidth(Double.MAX_VALUE);
         controlBox.getChildren().addAll(topRow, checkBox1);
-
         VBox bluePlayerBox = new VBox(10);
         bluePlayerBox.setAlignment(Pos.CENTER);
         bluePlayerBox.setPrefWidth(120);
@@ -139,15 +139,36 @@ public class GUI extends Application {
         boardRow.setPadding(new Insets(10));
         boardRow.getChildren().addAll(bluePlayerBox, boardStack, redPlayerBox);
 
-        HBox statusBox = new HBox(gameStatus);
-        statusBox.setAlignment(Pos.CENTER);
-        statusBox.setPadding(new Insets(10));
+        newGameButton.setPrefWidth(100);
+        newGameButton.setOnAction(e -> {
+            if (radioButton1.isSelected()) {
+                game = new SimpleGame(gridSize);
+            } else {
+                game = new GeneralGame(gridSize);
+            }
+            console = new Console(game.getBoard(), msg -> consoleOutput.appendText(msg + "\n"));
+            gameStatus.setText("Blue's Turn");
+            consoleOutput.clear();
+            drawNewBoard();
+        });
+
+        BorderPane bottomRow = new BorderPane();
+        bottomRow.setPadding(new Insets(10));
+
+        HBox centeredStatus = new HBox(gameStatus);
+        centeredStatus.setAlignment(Pos.CENTER);
+        bottomRow.setCenter(centeredStatus);
+
+        HBox buttonBox = new HBox(newGameButton);
+        buttonBox.setAlignment(Pos.CENTER_RIGHT);
+        bottomRow.setRight(buttonBox);
 
         consoleOutput.setEditable(false);
         consoleOutput.setPrefHeight(120);
         consoleOutput.setWrapText(true);
         consoleOutput.setStyle("-fx-font-family: monospace; -fx-font-size: 12px;");
-        VBox bottomBox = new VBox(10, statusBox, consoleOutput);
+
+        VBox bottomBox = new VBox(10, bottomRow, consoleOutput);
         bottomBox.setPadding(new Insets(10));
 
         BorderPane borderPane = new BorderPane();
