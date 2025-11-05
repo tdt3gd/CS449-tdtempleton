@@ -50,7 +50,6 @@ public abstract class SOSGame {
     protected List<ScoredSequence> findAllSOS(int row, int col, String player) {
         List<ScoredSequence> sequences = new ArrayList<>();
         char letter = board.getCell(row, col);
-        if (letter != 'S') return sequences;
 
         int[][] directions = {
             {-1, 0}, {1, 0},     // vertical
@@ -59,18 +58,34 @@ public abstract class SOSGame {
             {-1, 1}, {1, -1}     // diagonal UR-LL and LL-UR
         };
 
-        for (int[] dir : directions) {
-            int r1 = row + dir[0];
-            int c1 = col + dir[1];
-            int r2 = row + 2 * dir[0];
-            int c2 = col + 2 * dir[1];
+        if (letter == 'S') {
+            for (int[] dir : directions) {
+                int r1 = row + dir[0];
+                int c1 = col + dir[1];
+                int r2 = row + 2 * dir[0];
+                int c2 = col + 2 * dir[1];
 
-            if (isInBounds(r1, c1) && isInBounds(r2, c2)) {
-                if (board.getCell(r1, c1) == 'O' && board.getCell(r2, c2) == 'S') {
-                    sequences.add(new ScoredSequence(row, col, r2, c2, player));
+                if (isInBounds(r1, c1) && isInBounds(r2, c2)) {
+                    if (board.getCell(r1, c1) == 'O' && board.getCell(r2, c2) == 'S') {
+                        sequences.add(new ScoredSequence(row, col, r2, c2, player));
+                    }
+                }
+            }
+        } else if (letter == 'O') {
+            for (int[] dir : directions) {
+                int r1 = row + dir[0];
+                int c1 = col + dir[1];
+                int r2 = row - dir[0];
+                int c2 = col - dir[1];
+
+                if (isInBounds(r1, c1) && isInBounds(r2, c2)) {
+                    if (board.getCell(r1, c1) == 'S' && board.getCell(r2, c2) == 'S') {
+                        sequences.add(new ScoredSequence(r1, c1, r2, c2, player));
+                    }
                 }
             }
         }
+
         return sequences;
     }
 
