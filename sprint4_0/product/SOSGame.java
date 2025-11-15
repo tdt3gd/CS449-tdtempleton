@@ -93,6 +93,22 @@ public abstract class SOSGame {
         return row >= 0 && row < boardSize && col >= 0 && col < boardSize;
     }
 
+    public boolean isCellEmpty(int row, int col) {
+        return isInBounds(row, col) && board.getCell(row, col) == '\0';
+    }
+
+    public List<int[]> getAvailableMoves() {
+        List<int[]> moves = new ArrayList<>();
+        for (int row = 0; row < boardSize; row++) {
+            for (int col = 0; col < boardSize; col++) {
+                if (board.getCell(row, col) == '\0') {
+                    moves.add(new int[]{row, col});
+                }
+            }
+        }
+        return moves;
+    }
+
     public abstract boolean isGameOver();
     public abstract String getWinner();
 }
