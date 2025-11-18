@@ -13,6 +13,8 @@ import javafx.scene.shape.Line;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
+import java.util.List;
+
 public class GUI extends Application {
 
     private SOSGame game;
@@ -34,10 +36,17 @@ public class GUI extends Application {
     private RadioButton redS = new RadioButton("S");
     private RadioButton redO = new RadioButton("O");
 
+    private ComboBox<String> bluePlayerType = new ComboBox<>();
+    private ComboBox<String> redPlayerType = new ComboBox<>();
+
+    private Label blueScoreLabel = new Label("Score: 0");
+    private Label redScoreLabel = new Label("Score: 0");
+
+    private Slider speedSlider = new Slider(100, 1000, 300); // AI speed in ms
+
     private int gridSize = 8;
     private GridPane boardPane = new GridPane();
     private Pane lineLayer = new Pane();
-    private CheckBox checkBox1 = new CheckBox("Enable AI");
     private TextArea consoleOutput = new TextArea();
     private Button newGameButton = new Button("New Game");
 
@@ -76,21 +85,6 @@ public class GUI extends Application {
             console = new Console(game.getBoard(), msg -> consoleOutput.appendText(msg + "\n"));
             drawNewBoard();
         });
-
-        boardSizeSelector.getItems().addAll(3, 4, 5, 6, 7, 8);
-        boardSizeSelector.setValue(gridSize);
-        boardSizeSelector.setPrefWidth(60);
-        boardSizeSelector.setOnAction(e -> {
-            gridSize = boardSizeSelector.getValue();
-            if (radioButton1.isSelected()) {
-                game = new SimpleGame(gridSize);
-            } else {
-                game = new GeneralGame(gridSize);
-            }
-            console = new Console(game.getBoard(), msg -> consoleOutput.appendText(msg + "\n"));
-            drawNewBoard();
-        });
-
         HBox boardSizeBox = new HBox(5);
         boardSizeBox.setAlignment(Pos.CENTER_RIGHT);
         Label boardSizeLabel = new Label("Board size:");
@@ -99,14 +93,26 @@ public class GUI extends Application {
 
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
-
         topRow.getChildren().addAll(titleLabel, radioButton1, radioButton2, spacer, boardSizeBox);
 
         VBox controlBox = new VBox(10);
         controlBox.setAlignment(Pos.CENTER);
         controlBox.setPadding(new Insets(10));
         controlBox.setPrefWidth(Double.MAX_VALUE);
-        controlBox.getChildren().addAll(topRow, checkBox1);
+
+        Label speedLabel = new Label("AI Speed (ms):");
+        speedSlider.setShowTickLabels(true);
+        speedSlider.setShowTickMarks(true);
+        speedSlider.setMajorTickUnit(300);
+        speedSlider.setMinorTickCount(2);
+        speedSlider.setBlockIncrement(100);
+        speedSlider.setPrefWidth(200);
+
+        HBox speedBox = new HBox(10, speedLabel, speedSlider);
+        speedBox.setAlignment(Pos.CENTER);
+
+        controlBox.getChildren().addAll(topRow, speedBox);
+
         VBox bluePlayerBox = new VBox(10);
         bluePlayerBox.setAlignment(Pos.CENTER);
         bluePlayerBox.setPrefWidth(120);
@@ -115,7 +121,9 @@ public class GUI extends Application {
         blueS.setToggleGroup(bluePlayerGroup);
         blueO.setToggleGroup(bluePlayerGroup);
         blueS.setSelected(true);
-        bluePlayerBox.getChildren().addAll(blueLabel, blueS, blueO);
+        bluePlayerType.getItems().addAll("Human", "Computer");
+        bluePlayerType.setValue("Human");
+        bluePlayerBox.getChildren().addAll(blueLabel, blueS, blueO, bluePlayerType, blueScoreLabel);
 
         VBox redPlayerBox = new VBox(10);
         redPlayerBox.setAlignment(Pos.CENTER);
@@ -125,7 +133,9 @@ public class GUI extends Application {
         redS.setToggleGroup(redPlayerGroup);
         redO.setToggleGroup(redPlayerGroup);
         redS.setSelected(true);
-        redPlayerBox.getChildren().addAll(redLabel, redS, redO);
+        redPlayerType.getItems().addAll("Human", "Computer");
+        redPlayerType.setValue("Human");
+        redPlayerBox.getChildren().addAll(redLabel, redS, redO, redPlayerType, redScoreLabel);
 
         boardPane.setStyle("-fx-border-color: black; -fx-border-width: 2px;");
         boardPane.setPrefWidth(500);
@@ -149,140 +159,196 @@ public class GUI extends Application {
             console = new Console(game.getBoard(), msg -> consoleOutput.appendText(msg + "\n"));
             gameStatus.setText("Blue's Turn");
             consoleOutput.clear();
+            blueScoreLabel.setText("Score: 0");
+            redScoreLabel.setText("Score: 0");
             drawNewBoard();
-        });
 
-        BorderPane bottomRow = new BorderPane();
-        bottomRow.setPadding(new Insets(10));
-
-        HBox centeredStatus = new HBox(gameStatus);
-        centeredStatus.setAlignment(Pos.CENTER);
-        bottomRow.setCenter(centeredStatus);
-
-        HBox buttonBox = new HBox(newGameButton);
-        buttonBox.setAlignment(Pos.CENTER_RIGHT);
-        bottomRow.setRight(buttonBox);
-
-        consoleOutput.setEditable(false);
-        consoleOutput.setPrefHeight(120);
-        consoleOutput.setWrapText(true);
-        consoleOutput.setStyle("-fx-font-family: monospace; -fx-font-size: 12px;");
-
-        VBox bottomBox = new VBox(10, bottomRow, consoleOutput);
-        bottomBox.setPadding(new Insets(10));
-
-        BorderPane borderPane = new BorderPane();
-        borderPane.setTop(controlBox);
-        borderPane.setCenter(boardRow);
-        borderPane.setBottom(bottomBox);
-
-        Scene scene = new Scene(borderPane, 800, 650);
-        primaryStage.setTitle("SOS");
-        primaryStage.setScene(scene);
-        primaryStage.show();
-    }
-    public void drawNewBoard() {
-        squares = new Square[gridSize][gridSize];
-        drawBoard();
-    }
-
-    public void drawBoard() {
-        boardPane.getChildren().clear();
-        lineLayer.getChildren().clear();
-
-        for (int row = 0; row < gridSize; row++) {
-            for (int col = 0; col < gridSize; col++) {
-                Square square = new Square(row, col);
-                squares[row][col] = square;
-                boardPane.add(square, col, row);
-
-                char cell = game.getBoard().getCell(row, col);
-                if (cell == 'S') {
-                    square.drawCross();
-                } else if (cell == 'O') {
-                    square.drawNought();
-                }
-            }
-        }
-
-        PauseTransition pause = new PauseTransition(Duration.millis(50));
-        pause.setOnFinished(e -> {
-            for (ScoredSequence seq : game.getScoredSequences()) {
-                drawLineBetweenSquares(seq.startRow, seq.startCol, seq.endRow, seq.endCol, seq.player);
+            if (isCurrentPlayerComputer()) {
+                PauseTransition aiPause = new PauseTransition(Duration.millis(speedSlider.getValue()));
+                aiPause.setOnFinished(ev -> makeComputerMove());
+                aiPause.play();
             }
         });
-        pause.play();
-    }
 
-    private void drawLineBetweenSquares(int r1, int c1, int r2, int c2, String player) {
-        Square start = squares[r1][c1];
-        Square end = squares[r2][c2];
+    BorderPane bottomRow = new BorderPane();
+    bottomRow.setPadding(new Insets(10));
 
-        Bounds startBounds = start.localToParent(start.getBoundsInLocal());
-        Bounds endBounds = end.localToParent(end.getBoundsInLocal());
+    HBox centeredStatus = new HBox(gameStatus);
+    centeredStatus.setAlignment(Pos.CENTER);
+    bottomRow.setCenter(centeredStatus);
 
-        double x1 = startBounds.getMinX() + startBounds.getWidth() / 2;
-        double y1 = startBounds.getMinY() + startBounds.getHeight() / 2;
-        double x2 = endBounds.getMinX() + endBounds.getWidth() / 2;
-        double y2 = endBounds.getMinY() + endBounds.getHeight() / 2;
+    HBox buttonBox = new HBox(newGameButton);
+    buttonBox.setAlignment(Pos.CENTER_RIGHT);
+    bottomRow.setRight(buttonBox);
 
-        Line line = new Line(x1, y1, x2, y2);
-        line.setStroke(player.equals("Blue") ? Color.BLUE : Color.RED);
-        line.setStrokeWidth(4);
-        lineLayer.getChildren().add(line);
-    }
+    consoleOutput.setEditable(false);
+    consoleOutput.setPrefHeight(120);
+    consoleOutput.setWrapText(true);
+    consoleOutput.setStyle("-fx-font-family: monospace; -fx-font-size: 12px;");
 
-    private class Square extends StackPane {
-        private final int row;
-        private final int col;
+    VBox bottomBox = new VBox(10, bottomRow, consoleOutput);
+    bottomBox.setPadding(new Insets(10));
 
-        public Square(int row, int col) {
-            this.row = row;
-            this.col = col;
-            setPrefSize(60, 60);
-            setStyle("-fx-border-color: black; -fx-background-color: white;");
-            setOnMouseClicked(e -> handleClick());
-        }
+    BorderPane borderPane = new BorderPane();
+    borderPane.setTop(controlBox);
+    borderPane.setCenter(boardRow);
+    borderPane.setBottom(bottomBox);
 
-        private void handleClick() {
-            if (game.isGameOver()) return;
+    Scene scene = new Scene(borderPane, 800, 650);
+    primaryStage.setTitle("SOS");
+    primaryStage.setScene(scene);
+    primaryStage.show();
+}
 
-            char letter = getSelectedLetterForCurrentPlayer();
-            if (game.makeMove(row, col, letter)) {
-                drawBoard();
-                console.printMove(row, col);
-                if (game.isGameOver()) {
-                    gameStatus.setText("Game Over: " + game.getWinner());
-                    console.printWinner(game.getWinner());
-                } else {
-                    gameStatus.setText(game.getCurrentPlayer() + "'s Turn");
-                }
+public void drawNewBoard() {
+    squares = new Square[gridSize][gridSize];
+    drawBoard();
+}
+
+public void drawBoard() {
+    boardPane.getChildren().clear();
+    lineLayer.getChildren().clear();
+
+    for (int row = 0; row < gridSize; row++) {
+        for (int col = 0; col < gridSize; col++) {
+            Square square = new Square(row, col);
+            squares[row][col] = square;
+            boardPane.add(square, col, row);
+
+            char cell = game.getBoard().getCell(row, col);
+            if (cell == 'S') {
+                square.drawCross();
+            } else if (cell == 'O') {
+                square.drawNought();
             }
         }
+    }
 
-        private char getSelectedLetterForCurrentPlayer() {
-            String player = game.getCurrentPlayer();
-            if (player.equals("Blue")) {
-                return blueS.isSelected() ? 'S' : 'O';
+    if (game instanceof GeneralGame) {
+        blueScoreLabel.setText("Score: " + ((GeneralGame) game).getBlueScore());
+        redScoreLabel.setText("Score: " + ((GeneralGame) game).getRedScore());
+    }
+
+    PauseTransition pause = new PauseTransition(Duration.millis(50));
+    pause.setOnFinished(e -> {
+        for (ScoredSequence seq : game.getScoredSequences()) {
+            drawLineBetweenSquares(seq.startRow, seq.startCol, seq.endRow, seq.endCol, seq.player);
+        }
+    });
+    pause.play();
+}
+
+private void drawLineBetweenSquares(int r1, int c1, int r2, int c2, String player) {
+    Square start = squares[r1][c1];
+    Square end = squares[r2][c2];
+
+    Bounds startBounds = start.localToParent(start.getBoundsInLocal());
+    Bounds endBounds = end.localToParent(end.getBoundsInLocal());
+
+    double x1 = startBounds.getMinX() + startBounds.getWidth() / 2;
+    double y1 = startBounds.getMinY() + startBounds.getHeight() / 2;
+    double x2 = endBounds.getMinX() + endBounds.getWidth() / 2;
+    double y2 = endBounds.getMinY() + endBounds.getHeight() / 2;
+
+    Line line = new Line(x1, y1, x2, y2);
+    line.setStroke(player.equals("Blue") ? Color.BLUE : Color.RED);
+    line.setStrokeWidth(4);
+    lineLayer.getChildren().add(line);
+}
+
+private class Square extends StackPane {
+    private final int row;
+    private final int col;
+
+    public Square(int row, int col) {
+        this.row = row;
+        this.col = col;
+        setPrefSize(60, 60);
+        setStyle("-fx-border-color: black; -fx-background-color: white;");
+        setOnMouseClicked(e -> handleClick());
+    }
+
+    private void handleClick() {
+        if (game.isGameOver()) return;
+        if (isCurrentPlayerComputer()) return;
+
+        char letter = getSelectedLetterForCurrentPlayer();
+        if (game.makeMove(row, col, letter)) {
+            drawBoard();
+            console.printMove(row, col);
+            if (game.isGameOver()) {
+                gameStatus.setText("Game Over: " + game.getWinner());
+                console.printWinner(game.getWinner());
             } else {
-                return redS.isSelected() ? 'S' : 'O';
+                gameStatus.setText(game.getCurrentPlayer() + "'s Turn");
+                if (isCurrentPlayerComputer()) {
+                    PauseTransition aiPause = new PauseTransition(Duration.millis(speedSlider.getValue()));
+                    aiPause.setOnFinished(ev -> makeComputerMove());
+                    aiPause.play();
+                }
             }
-        }
-
-        public void drawCross() {
-            Label label = new Label("S");
-            label.setStyle("-fx-font-size: 24px; -fx-text-fill: black;");
-            getChildren().add(label);
-        }
-
-        public void drawNought() {
-            Label label = new Label("O");
-            label.setStyle("-fx-font-size: 24px; -fx-text-fill: black;");
-            getChildren().add(label);
         }
     }
 
-    public static void main(String[] args) {
-        launch(args);
+    private char getSelectedLetterForCurrentPlayer() {
+        String player = game.getCurrentPlayer();
+        if (player.equals("Blue")) {
+            return blueS.isSelected() ? 'S' : 'O';
+        } else {
+            return redS.isSelected() ? 'S' : 'O';
+        }
+    }
+
+    public void drawCross() {
+        Label label = new Label("S");
+        label.setStyle("-fx-font-size: 24px; -fx-text-fill: black;");
+        getChildren().add(label);
+    }
+
+    public void drawNought() {
+        Label label = new Label("O");
+        label.setStyle("-fx-font-size: 24px; -fx-text-fill: black;");
+        getChildren().add(label);
     }
 }
+
+private boolean isCurrentPlayerComputer() {
+    if (game.getCurrentPlayer().equals("Blue")) {
+        return bluePlayerType.getValue().equals("Computer");
+    } else {
+        return redPlayerType.getValue().equals("Computer");
+    }
+}
+
+private char chooseComputerLetter() {
+    return Math.random() < 0.5 ? 'S' : 'O';
+}
+
+private void makeComputerMove() {
+    List<int[]> moves = game.getAvailableMoves();
+    if (moves.isEmpty()) return;
+
+    int[] move = moves.get((int)(Math.random() * moves.size()));
+    char letter = chooseComputerLetter();
+    if (game.makeMove(move[0], move[1], letter)) {
+        drawBoard();
+        console.printMove(move[0], move[1]);
+        if (game.isGameOver()) {
+            gameStatus.setText("Game Over: " + game.getWinner());
+            console.printWinner(game.getWinner());
+        } else {
+            gameStatus.setText(game.getCurrentPlayer() + "'s Turn");
+            if (isCurrentPlayerComputer()) {
+                PauseTransition aiPause = new PauseTransition(Duration.millis(speedSlider.getValue()));
+                aiPause.setOnFinished(ev -> makeComputerMove());
+                aiPause.play();
+            }
+        }
+    }
+}
+
+public static void main(String[] args) {
+    launch(args);
+}
+}
+        

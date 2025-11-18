@@ -3,9 +3,10 @@ package sprint4_0.product;
 import java.util.List;
 
 public class GeneralGame extends SOSGame {
+    private boolean gameOver = false;
+    private String winner = null;
     private int blueScore = 0;
     private int redScore = 0;
-    private boolean gameOver = false;
 
     public GeneralGame(int size) {
         super(size);
@@ -22,34 +23,16 @@ public class GeneralGame extends SOSGame {
                 } else {
                     redScore += newSequences.size();
                 }
-                // Player keeps turn
-            } else {
-                switchPlayer();
             }
-
             if (isBoardFull()) {
                 gameOver = true;
+                winner = determineWinner();
+            } else {
+                switchPlayer();
             }
             return true;
         }
         return false;
-    }
-
-    @Override
-    public boolean isGameOver() {
-        return gameOver;
-    }
-
-    @Override
-    public String getWinner() {
-        if (!gameOver) return "None";
-        if (blueScore > redScore) return "Blue";
-        if (redScore > blueScore) return "Red";
-        return "Draw";
-    }
-
-    public int getScore(String player) {
-        return player.equals("Blue") ? blueScore : redScore;
     }
 
     private boolean isBoardFull() {
@@ -59,5 +42,29 @@ public class GeneralGame extends SOSGame {
             }
         }
         return true;
+    }
+
+    private String determineWinner() {
+        if (blueScore > redScore) return "Blue";
+        if (redScore > blueScore) return "Red";
+        return "Draw";
+    }
+
+    @Override
+    public boolean isGameOver() {
+        return gameOver;
+    }
+
+    @Override
+    public String getWinner() {
+        return winner == null ? "None" : winner;
+    }
+
+    public int getBlueScore() {
+        return blueScore;
+    }
+
+    public int getRedScore() {
+        return redScore;
     }
 }
