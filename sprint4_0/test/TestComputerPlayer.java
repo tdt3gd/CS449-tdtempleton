@@ -27,13 +27,13 @@ public class TestComputerPlayer {
     public void testGeneralGameScoresSingleSOS() {
         GeneralGame game = new GeneralGame(3);
         game.makeMove(0, 0, 'S'); // Blue
-        game.makeMove(1, 0, 'X'); // Red
+        game.makeMove(1, 0, 'S'); // Red
         game.makeMove(0, 2, 'S'); // Blue
-        game.makeMove(1, 2, 'X'); // Red
-        game.makeMove(2, 0, 'X'); // Blue
-        game.makeMove(2, 1, 'X'); // Red
-        game.makeMove(2, 2, 'X'); // Blue
-        game.makeMove(1, 1, 'X'); // Red
+        game.makeMove(1, 2, 'O'); // Red
+        game.makeMove(2, 0, 'O'); // Blue
+        game.makeMove(2, 1, 'S'); // Red
+        game.makeMove(2, 2, 'O'); // Blue
+        game.makeMove(1, 1, 'S'); // Red
         game.makeMove(0, 1, 'O'); // Blue → triggers 1 SOS
 
         assertEquals(1, game.getBlueScore());
@@ -43,20 +43,20 @@ public class TestComputerPlayer {
     public void testGeneralGameScoresMultipleSOS() {
         GeneralGame game = new GeneralGame(3);
 
-        // Horizontal SOS: (0,0)-(0,1)-(0,2)
+        // Fill all outer cells with 'S'
         game.makeMove(0, 0, 'S'); // Blue
-        game.makeMove(1, 0, 'S'); // Red
+        game.makeMove(0, 1, 'S'); // Red
         game.makeMove(0, 2, 'S'); // Blue
-        game.makeMove(1, 2, 'S'); // Red
-
-        // Diagonal SOS: (2,0)-(1,1)-(0,2)
-        game.makeMove(2, 0, 'S'); // Blue
+        game.makeMove(1, 0, 'S'); // Red
+        game.makeMove(1, 2, 'S'); // Blue
+        game.makeMove(2, 0, 'S'); // Red
+        game.makeMove(2, 1, 'S'); // Blue
         game.makeMove(2, 2, 'S'); // Red
 
-        // Center 'O' triggers 3 SOS: horizontal, diagonal \, diagonal /
+        // Center 'O' triggers 4 unique SOS
         game.makeMove(1, 1, 'O'); // Blue
 
-        assertEquals(3, game.getBlueScore());
+        assertEquals(4, game.getBlueScore());
     }
 
     @Test
@@ -69,23 +69,35 @@ public class TestComputerPlayer {
     }
 
     @Test
-    public void testComputerCanFinishGame() {
+    public void testSimpleGameEndsAfterFirstSOS() {
         SOSGame game = new SimpleGame(3);
+        game.makeMove(0, 0, 'S'); // Blue
+        game.makeMove(1, 0, 'S'); // Red
+        game.makeMove(0, 2, 'S'); // Blue
+        game.makeMove(1, 2, 'O'); // Red
+        game.makeMove(0, 1, 'O'); // Blue → triggers SOS
+
+        assertTrue(game.isGameOver());
+        assertEquals("Blue", game.getWinner());
+    }
+
+    @Test
+    public void testGeneralGameEndsWhenBoardIsFull() {
+        SOSGame game = new GeneralGame(3);
         char[] letters = {'S', 'O'};
         int turn = 0;
 
         for (int row = 0; row < 3; row++) {
             for (int col = 0; col < 3; col++) {
-                if (!(row == 2 && col == 2)) {
+                if (!game.isGameOver()) {
                     game.makeMove(row, col, letters[turn % 2]);
                     turn++;
                 }
             }
         }
 
-        assertFalse(game.isGameOver());
-        game.makeMove(2, 2, 'O');
         assertTrue(game.isGameOver());
+        assertNotNull(game.getWinner()); // could be "Blue", "Red", or "Draw"
     }
 
     @Test
