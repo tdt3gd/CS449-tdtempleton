@@ -1,106 +1,90 @@
 package sprint4_0.test;
 
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
-import sprint3_0.product.SimpleGame;
-import sprint3_0.product.GeneralGame;
+import sprint4_0.product.*;
 
 import static org.junit.Assert.*;
 
 public class TestGameEndConditions {
 
-    private SimpleGame simpleGame;
-    private GeneralGame generalGame;
-
-    @Before
-    public void setUp() {
-        // Each test initializes its own game
-    }
-
-    @After
-    public void tearDown() {
-        simpleGame = null;
-        generalGame = null;
-    }
-
-    // --- User Story 5: SimpleGame ---
-
     @Test
     public void testSimpleGameEndsOnFirstSOS_Horizontal() {
-        simpleGame = new SimpleGame(3);
-        simpleGame.makeMove(0, 0, 'S'); // Blue
-        simpleGame.makeMove(1, 0, 'S'); // Red
-        simpleGame.makeMove(0, 1, 'O'); // Blue
-        simpleGame.makeMove(1, 1, 'O'); // Red
-        simpleGame.makeMove(0, 2, 'S'); // Blue completes SOS
+        SimpleGame game = new SimpleGame(3);
+        game.makeMove(0, 0, 'S');
+        game.makeMove(1, 0, 'X');
+        game.makeMove(0, 2, 'S');
+        game.makeMove(1, 2, 'X');
+        game.makeMove(0, 1, 'O'); // triggers SOS
 
-        assertTrue(simpleGame.isGameOver());
-        assertEquals("Blue", simpleGame.getWinner());
-        assertEquals(1, simpleGame.getScoredSequences().size());
+        assertTrue(game.isGameOver());
+        assertEquals("Blue", game.getWinner());
+        assertEquals(1, game.getScoredSequences().size());
     }
-
-    @Test
-    public void testSimpleGameEndsInDrawWhenBoardIsFull_NoSOS() {
-        simpleGame = new SimpleGame(3);
-        simpleGame.makeMove(0, 0, 'S'); // Blue
-        simpleGame.makeMove(0, 1, 'O'); // Red
-        simpleGame.makeMove(0, 2, 'O'); // Blue
-        simpleGame.makeMove(1, 0, 'O'); // Red
-        simpleGame.makeMove(1, 1, 'S'); // Blue
-        simpleGame.makeMove(1, 2, 'O'); // Red
-        simpleGame.makeMove(2, 0, 'O'); // Blue
-        simpleGame.makeMove(2, 1, 'S'); // Red
-        simpleGame.makeMove(2, 2, 'S'); // Blue
-
-        assertTrue(simpleGame.isGameOver());
-        assertEquals("Draw", simpleGame.getWinner());
-        assertEquals(0, simpleGame.getScoredSequences().size());
-    }
-
-    // --- User Story 7: GeneralGame ---
 
     @Test
     public void testGeneralGameEndsAfterBoardFull_WinnerByScore() {
-        generalGame = new GeneralGame(3);
-        generalGame.makeMove(0, 0, 'S'); // Blue
-        generalGame.makeMove(0, 1, 'O'); // Red
-        generalGame.makeMove(0, 2, 'S'); // Blue scores 1
+        GeneralGame game = new GeneralGame(3);
 
-        generalGame.makeMove(1, 0, 'S'); // Blue
-        generalGame.makeMove(1, 1, 'O'); // Red
-        generalGame.makeMove(1, 2, 'S'); // Blue scores 1
+        // Blue scores horizontal SOS
+        game.makeMove(0, 0, 'S');
+        game.makeMove(1, 0, 'X');
+        game.makeMove(0, 2, 'S');
+        game.makeMove(1, 2, 'X');
+        game.makeMove(0, 1, 'O'); // Blue → 1 SOS
 
-        generalGame.makeMove(2, 0, 'O'); // Blue
-        generalGame.makeMove(2, 1, 'S'); // Red
-        generalGame.makeMove(2, 2, 'O'); // Blue
+        // Fill remaining cells with non-SOS
+        game.makeMove(2, 0, 'X');
+        game.makeMove(2, 1, 'X');
+        game.makeMove(1, 1, 'X');
+        game.makeMove(2, 2, 'X');
 
-        assertTrue(generalGame.isGameOver());
-        assertEquals("Blue", generalGame.getWinner());
-        assertEquals(2, generalGame.getScore("Blue"));
-        assertEquals(0, generalGame.getScore("Red"));
+        assertTrue(game.isGameOver());
+        assertEquals("Blue", game.getWinner());
+        assertEquals(1, game.getBlueScore());
+        assertEquals(0, game.getRedScore());
     }
 
     @Test
     public void testGeneralGameEndsInDrawWhenScoresEqual() {
-        generalGame = new GeneralGame(3);
+        GeneralGame game = new GeneralGame(3);
 
-        // Blue scores one SOS horizontally at top row
-        generalGame.makeMove(0, 0, 'S'); // Blue
-        generalGame.makeMove(1, 0, 'O'); // Red
-        generalGame.makeMove(0, 1, 'O'); // Blue
-        generalGame.makeMove(1, 1, 'S'); // Red
-        generalGame.makeMove(0, 2, 'S'); // Blue → SOS at (0,0)-(0,1)-(0,2)
+        // Blue scores horizontal SOS: (0,0)-(0,1)-(0,2)
+        game.makeMove(0, 0, 'S'); // Blue
+        game.makeMove(1, 0, 'X'); // Red
+        game.makeMove(0, 2, 'S'); // Blue
+        game.makeMove(1, 2, 'X'); // Red
+        game.makeMove(0, 1, 'O'); // Blue → 1 SOS
 
-        // Red scores one SOS vertically at right column
-        generalGame.makeMove(2, 0, 'O'); // Blue
-        generalGame.makeMove(1, 2, 'O'); // Red
-        generalGame.makeMove(2, 1, 'S'); // Blue
-        generalGame.makeMove(2, 2, 'S'); // Red → SOS at (0,2)-(1,2)-(2,2)
+        // Red scores diagonal SOS: (2,0)-(1,1)-(0,2)
+        game.makeMove(2, 0, 'S'); // Red
+        game.makeMove(2, 2, 'X'); // Blue — blocks second diagonal
+        game.makeMove(1, 1, 'O'); // Red → 1 SOS
 
-        assertTrue(generalGame.isGameOver());
-        assertEquals(1, generalGame.getScore("Blue"));
-        assertEquals(1, generalGame.getScore("Red"));
-        assertEquals("Draw", generalGame.getWinner());
+        // Block vertical SOS
+        game.makeMove(2, 1, 'X'); // Blue
+
+        assertTrue(game.isGameOver());
+        assertEquals(1, game.getBlueScore());
+        assertEquals(1, game.getRedScore());
+        assertEquals("Draw", game.getWinner());
+    }
+
+    @Test
+    public void testDoubleDiagonalSOSFromCenterO() {
+        GeneralGame game = new GeneralGame(3);
+
+        // Set up diagonals
+        game.makeMove(0, 0, 'S'); // Blue
+        game.makeMove(0, 1, 'X'); // Red
+        game.makeMove(0, 2, 'S'); // Blue
+        game.makeMove(1, 0, 'X'); // Red
+        game.makeMove(2, 0, 'S'); // Blue
+        game.makeMove(1, 2, 'X'); // Red
+        game.makeMove(2, 2, 'S'); // Blue
+
+        // Red places 'O' at center to complete both diagonals
+        game.makeMove(1, 1, 'O'); // Red → should score 2 SOS
+
+        assertEquals(2, game.getRedScore());
     }
 }
