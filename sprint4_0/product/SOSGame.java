@@ -5,17 +5,16 @@ import java.util.List;
 
 public abstract class SOSGame {
     protected Board board;
-    protected String currentPlayer;
-    protected int boardSize;
+    protected String currentPlayer = "Blue";
     protected List<ScoredSequence> scoredSequences = new ArrayList<>();
+    protected int[] lastMove = null;
+    protected char lastLetter = '\0';
 
     public SOSGame(int size) {
-        if (size < 3 || size > 8) {
-            throw new IllegalArgumentException("Board size must be between 3 and 8.");
+        if (size < 3) {
+            throw new IllegalArgumentException("Game board size must be at least 3.");
         }
-        this.boardSize = size;
-        this.board = new Board(size);
-        this.currentPlayer = "Blue";
+        board = new Board(size);
     }
 
     public Board getBoard() {
@@ -26,82 +25,34 @@ public abstract class SOSGame {
         return currentPlayer;
     }
 
-    public int getSize() {
-        return boardSize;
-    }
-
-    public void switchPlayer() {
-        currentPlayer = currentPlayer.equals("Blue") ? "Red" : "Blue";
-    }
-
-    public boolean makeMove(int row, int col, char letter) {
-        if (row < 0 || row >= boardSize || col < 0 || col >= boardSize) return false;
-        if (board.getCell(row, col) == '\0') {
-            board.makeMove(row, col, letter, currentPlayer);
-            return true;
-        }
-        return false;
-    }
-
     public List<ScoredSequence> getScoredSequences() {
         return scoredSequences;
     }
 
-    protected List<ScoredSequence> findAllSOS(int row, int col, String player) {
-        List<ScoredSequence> sequences = new ArrayList<>();
-        char letter = board.getCell(row, col);
-
-        int[][] directions = {
-            {-1, 0}, {1, 0},     // vertical
-            {0, -1}, {0, 1},     // horizontal
-            {-1, -1}, {1, 1},    // diagonal UL-LR and LR-UL
-            {-1, 1}, {1, -1}     // diagonal UR-LL and LL-UR
-        };
-
-        if (letter == 'S') {
-            for (int[] dir : directions) {
-                int r1 = row + dir[0];
-                int c1 = col + dir[1];
-                int r2 = row + 2 * dir[0];
-                int c2 = col + 2 * dir[1];
-
-                if (isInBounds(r1, c1) && isInBounds(r2, c2)) {
-                    if (board.getCell(r1, c1) == 'O' && board.getCell(r2, c2) == 'S') {
-                        sequences.add(new ScoredSequence(row, col, r2, c2, player));
-                    }
-                }
-            }
-        } else if (letter == 'O') {
-            for (int[] dir : directions) {
-                int r1 = row + dir[0];
-                int c1 = col + dir[1];
-                int r2 = row - dir[0];
-                int c2 = col - dir[1];
-
-                if (isInBounds(r1, c1) && isInBounds(r2, c2)) {
-                    if (board.getCell(r1, c1) == 'S' && board.getCell(r2, c2) == 'S') {
-                        sequences.add(new ScoredSequence(r1, c1, r2, c2, player));
-                    }
-                }
-            }
-        }
-
-        return sequences;
+    public int[] getLastMove() {
+        return lastMove;
     }
 
-    protected boolean isInBounds(int row, int col) {
-        return row >= 0 && row < boardSize && col >= 0 && col < boardSize;
+    public char getLastLetter() {
+        return lastLetter;
     }
 
-    public boolean isCellEmpty(int row, int col) {
-        return isInBounds(row, col) && board.getCell(row, col) == '\0';
+    public boolean makeMove(int row, int col, char letter) {
+        if (!board.placeLetter(row, col, letter)) return false;
+        lastMove = new int[]{row, col};
+        lastLetter = letter;
+        List<ScoredSequence> newSequences = BoardAnalyzer.checkSOS(board, row, col, currentPlayer);
+        scoredSequences.addAll(newSequences);
+        handleScoring(newSequences);
+        return true;
     }
 
     public List<int[]> getAvailableMoves() {
         List<int[]> moves = new ArrayList<>();
-        for (int row = 0; row < boardSize; row++) {
-            for (int col = 0; col < boardSize; col++) {
-                if (board.getCell(row, col) == '\0') {
+        int size = board.getSize();
+        for (int row = 0; row < size; row++) {
+            for (int col = 0; col < size; col++) {
+                if (board.isCellEmpty(row, col)) {
                     moves.add(new int[]{row, col});
                 }
             }
@@ -109,6 +60,19 @@ public abstract class SOSGame {
         return moves;
     }
 
-    public abstract boolean isGameOver();
-    public abstract String getWinner();
+    protected abstract void handleScoring(List<ScoredSequence> newSequences);
+
+    protected void switchPlayer() {
+        currentPlayer = currentPlayer.equals("Blue") ? "Red" : "Blue";
+    }
+
+    public boolean isGameOver() {
+        return board.isFull();
+    }
+
+    public String getWinner() {
+        return isGameOver() ? determineWinner() : null;
+    }
+
+    protected abstract String determineWinner();
 }

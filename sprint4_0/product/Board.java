@@ -1,43 +1,49 @@
 package sprint4_0.product;
 
 public class Board {
-    private final int size;
     private final char[][] grid;
-    private final String[][] owners;
 
     public Board(int size) {
-        this.size = size;
-        this.grid = new char[size][size];
-        this.owners = new String[size][size];
+        if (size < 3) {
+            throw new IllegalArgumentException("Board size must be at least 3.");
+        }
+        grid = new char[size][size];
     }
 
     public int getSize() {
-        return size;
+        return grid.length;
     }
 
     public char getCell(int row, int col) {
         return grid[row][col];
     }
 
-    public String getOwner(int row, int col) {
-        return owners[row][col];
+    public boolean isCellEmpty(int row, int col) {
+        return grid[row][col] == '\0';
     }
 
-    public boolean makeMove(int row, int col, char letter, String player) {
-        if (row < 0 || row >= size || col < 0 || col >= size) return false;
-        if (grid[row][col] != '\0') return false;
+    public boolean placeLetter(int row, int col, char letter) {
+        if (isCellEmpty(row, col)) {
+            grid[row][col] = letter;
+            return true;
+        }
+        return false;
+    }
 
-        grid[row][col] = letter;
-        owners[row][col] = player;
+    public boolean isFull() {
+        for (char[] row : grid) {
+            for (char cell : row) {
+                if (cell == '\0') return false;
+            }
+        }
         return true;
     }
 
-    public void reset() {
-        for (int row = 0; row < size; row++) {
-            for (int col = 0; col < size; col++) {
-                grid[row][col] = '\0';
-                owners[row][col] = null;
-            }
-        }
+    public char[][] getGrid() {
+        return grid;
+    }
+ // For testing purposes only
+    public void setCell(int row, int col, char letter) {
+        grid[row][col] = letter;
     }
 }

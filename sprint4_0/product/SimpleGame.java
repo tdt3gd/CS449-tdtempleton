@@ -11,40 +11,29 @@ public class SimpleGame extends SOSGame {
     }
 
     @Override
-    public boolean makeMove(int row, int col, char letter) {
-        if (super.makeMove(row, col, letter)) {
-            List<ScoredSequence> newSequences = findAllSOS(row, col, currentPlayer);
-            if (!newSequences.isEmpty()) {
-                scoredSequences.addAll(newSequences);
-                gameOver = true;
-                winner = currentPlayer;
-            } else if (isBoardFull()) {
-                gameOver = true;
-                winner = "Draw";
-            } else {
-                switchPlayer();
-            }
-            return true;
+    protected void handleScoring(List<ScoredSequence> newSequences) {
+        if (!newSequences.isEmpty()) {
+            gameOver = true;
+            winner = currentPlayer;
+        } else {
+            switchPlayer();
         }
-        return false;
     }
 
     @Override
     public boolean isGameOver() {
-        return gameOver;
+        return gameOver || board.isFull();
     }
 
     @Override
     public String getWinner() {
-        return winner == null ? "None" : winner;
+        if (gameOver) return winner;
+        if (board.isFull()) return "Draw";
+        return null;
     }
 
-    private boolean isBoardFull() {
-        for (int row = 0; row < boardSize; row++) {
-            for (int col = 0; col < boardSize; col++) {
-                if (board.getCell(row, col) == '\0') return false;
-            }
-        }
-        return true;
+    @Override
+    protected String determineWinner() {
+        return scoredSequences.isEmpty() ? "Draw" : winner;
     }
 }

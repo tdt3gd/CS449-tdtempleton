@@ -13,7 +13,8 @@ import javafx.scene.shape.Line;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
-import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 public class GUI extends Application {
 
@@ -50,6 +51,8 @@ public class GUI extends Application {
     private TextArea consoleOutput = new TextArea();
     private Button newGameButton = new Button("New Game");
 
+    private Map<String, ComputerPlayer> computerPlayers = new HashMap<>();
+
     @Override
     public void start(Stage primaryStage) {
         game = new SimpleGame(gridSize);
@@ -57,6 +60,12 @@ public class GUI extends Application {
         squares = new Square[gridSize][gridSize];
         drawNewBoard();
 
+        boardSizeSelector.getItems().addAll(3, 4, 5, 6, 7, 8);
+        boardSizeSelector.setValue(gridSize);
+        boardSizeSelector.setOnAction(e -> {
+            gridSize = boardSizeSelector.getValue();
+            drawNewBoard();
+        });
         HBox topRow = new HBox(20);
         topRow.setAlignment(Pos.CENTER_LEFT);
         topRow.setPadding(new Insets(10));
@@ -85,6 +94,7 @@ public class GUI extends Application {
             console = new Console(game.getBoard(), msg -> consoleOutput.appendText(msg + "\n"));
             drawNewBoard();
         });
+
         HBox boardSizeBox = new HBox(5);
         boardSizeBox.setAlignment(Pos.CENTER_RIGHT);
         Label boardSizeLabel = new Label("Board size:");
@@ -110,7 +120,6 @@ public class GUI extends Application {
 
         HBox speedBox = new HBox(10, speedLabel, speedSlider);
         speedBox.setAlignment(Pos.CENTER);
-
         controlBox.getChildren().addAll(topRow, speedBox);
 
         VBox bluePlayerBox = new VBox(10);
@@ -143,7 +152,6 @@ public class GUI extends Application {
         StackPane boardStack = new StackPane(boardPane, lineLayer);
         boardStack.setPrefSize(500, 500);
         HBox.setHgrow(boardStack, Priority.ALWAYS);
-
         HBox boardRow = new HBox(20);
         boardRow.setAlignment(Pos.CENTER);
         boardRow.setPadding(new Insets(10));
@@ -161,6 +169,16 @@ public class GUI extends Application {
             consoleOutput.clear();
             blueScoreLabel.setText("Score: 0");
             redScoreLabel.setText("Score: 0");
+            squares = new Square[gridSize][gridSize];
+
+            computerPlayers.clear();
+            if (bluePlayerType.getValue().equals("Computer")) {
+                computerPlayers.put("Blue", new RandomComputerPlayer("Blue"));
+            }
+            if (redPlayerType.getValue().equals("Computer")) {
+                computerPlayers.put("Red", new RandomComputerPlayer("Red"));
+            }
+
             drawNewBoard();
 
             if (isCurrentPlayerComputer()) {
@@ -170,123 +188,140 @@ public class GUI extends Application {
             }
         });
 
-    BorderPane bottomRow = new BorderPane();
-    bottomRow.setPadding(new Insets(10));
+        BorderPane bottomRow = new BorderPane();
+        bottomRow.setPadding(new Insets(10));
+        HBox centeredStatus = new HBox(gameStatus);
+        centeredStatus.setAlignment(Pos.CENTER);
+        bottomRow.setCenter(centeredStatus);
+        HBox buttonBox = new HBox(newGameButton);
+        buttonBox.setAlignment(Pos.CENTER_RIGHT);
+        bottomRow.setRight(buttonBox);
 
-    HBox centeredStatus = new HBox(gameStatus);
-    centeredStatus.setAlignment(Pos.CENTER);
-    bottomRow.setCenter(centeredStatus);
+        consoleOutput.setEditable(false);
+        consoleOutput.setPrefHeight(120);
+        consoleOutput.setWrapText(true);
+        consoleOutput.setStyle("-fx-font-family: monospace; -fx-font-size: 12px;");
+        VBox bottomBox = new VBox(10, bottomRow, consoleOutput);
+        bottomBox.setPadding(new Insets(10));
 
-    HBox buttonBox = new HBox(newGameButton);
-    buttonBox.setAlignment(Pos.CENTER_RIGHT);
-    bottomRow.setRight(buttonBox);
+        BorderPane borderPane = new BorderPane();
+        borderPane.setTop(controlBox);
+        borderPane.setCenter(boardRow);
+        borderPane.setBottom(bottomBox);
 
-    consoleOutput.setEditable(false);
-    consoleOutput.setPrefHeight(120);
-    consoleOutput.setWrapText(true);
-    consoleOutput.setStyle("-fx-font-family: monospace; -fx-font-size: 12px;");
-
-    VBox bottomBox = new VBox(10, bottomRow, consoleOutput);
-    bottomBox.setPadding(new Insets(10));
-
-    BorderPane borderPane = new BorderPane();
-    borderPane.setTop(controlBox);
-    borderPane.setCenter(boardRow);
-    borderPane.setBottom(bottomBox);
-
-    Scene scene = new Scene(borderPane, 800, 650);
-    primaryStage.setTitle("SOS");
-    primaryStage.setScene(scene);
-    primaryStage.show();
-}
-
-public void drawNewBoard() {
-    squares = new Square[gridSize][gridSize];
-    drawBoard();
-}
-
-public void drawBoard() {
-    boardPane.getChildren().clear();
-    lineLayer.getChildren().clear();
-
-    for (int row = 0; row < gridSize; row++) {
-        for (int col = 0; col < gridSize; col++) {
-            Square square = new Square(row, col);
-            squares[row][col] = square;
-            boardPane.add(square, col, row);
-
-            char cell = game.getBoard().getCell(row, col);
-            if (cell == 'S') {
-                square.drawCross();
-            } else if (cell == 'O') {
-                square.drawNought();
-            }
-        }
+        Scene scene = new Scene(borderPane, 800, 650);
+        primaryStage.setTitle("SOS");
+        primaryStage.setScene(scene);
+        primaryStage.show();
+    }
+    public void drawNewBoard() {
+        squares = new Square[gridSize][gridSize];
+        drawBoard();
     }
 
-    if (game instanceof GeneralGame) {
-        blueScoreLabel.setText("Score: " + ((GeneralGame) game).getBlueScore());
-        redScoreLabel.setText("Score: " + ((GeneralGame) game).getRedScore());
-    }
+    public void drawBoard() {
+        boardPane.getChildren().clear();
+        lineLayer.getChildren().clear();
 
-    PauseTransition pause = new PauseTransition(Duration.millis(50));
-    pause.setOnFinished(e -> {
-        for (ScoredSequence seq : game.getScoredSequences()) {
-            drawLineBetweenSquares(seq.startRow, seq.startCol, seq.endRow, seq.endCol, seq.player);
-        }
-    });
-    pause.play();
-}
+        for (int row = 0; row < gridSize; row++) {
+            for (int col = 0; col < gridSize; col++) {
+                Square square = new Square(row, col);
+                squares[row][col] = square;
+                boardPane.add(square, col, row);
 
-private void drawLineBetweenSquares(int r1, int c1, int r2, int c2, String player) {
-    Square start = squares[r1][c1];
-    Square end = squares[r2][c2];
-
-    Bounds startBounds = start.localToParent(start.getBoundsInLocal());
-    Bounds endBounds = end.localToParent(end.getBoundsInLocal());
-
-    double x1 = startBounds.getMinX() + startBounds.getWidth() / 2;
-    double y1 = startBounds.getMinY() + startBounds.getHeight() / 2;
-    double x2 = endBounds.getMinX() + endBounds.getWidth() / 2;
-    double y2 = endBounds.getMinY() + endBounds.getHeight() / 2;
-
-    Line line = new Line(x1, y1, x2, y2);
-    line.setStroke(player.equals("Blue") ? Color.BLUE : Color.RED);
-    line.setStrokeWidth(4);
-    lineLayer.getChildren().add(line);
-}
-
-private class Square extends StackPane {
-    private final int row;
-    private final int col;
-
-    public Square(int row, int col) {
-        this.row = row;
-        this.col = col;
-        setPrefSize(60, 60);
-        setStyle("-fx-border-color: black; -fx-background-color: white;");
-        setOnMouseClicked(e -> handleClick());
-    }
-
-    private void handleClick() {
-        if (game.isGameOver()) return;
-        if (isCurrentPlayerComputer()) return;
-
-        char letter = getSelectedLetterForCurrentPlayer();
-        if (game.makeMove(row, col, letter)) {
-            drawBoard();
-            console.printMove(row, col);
-            if (game.isGameOver()) {
-                gameStatus.setText("Game Over: " + game.getWinner());
-                console.printWinner(game.getWinner());
-            } else {
-                gameStatus.setText(game.getCurrentPlayer() + "'s Turn");
-                if (isCurrentPlayerComputer()) {
-                    PauseTransition aiPause = new PauseTransition(Duration.millis(speedSlider.getValue()));
-                    aiPause.setOnFinished(ev -> makeComputerMove());
-                    aiPause.play();
+                char cell = game.getBoard().getCell(row, col);
+                if (cell == 'S') {
+                    square.drawCross();
+                } else if (cell == 'O') {
+                    square.drawNought();
                 }
             }
+        }
+
+        if (game instanceof GeneralGame) {
+            blueScoreLabel.setText("Score: " + ((GeneralGame) game).getBlueScore());
+            redScoreLabel.setText("Score: " + ((GeneralGame) game).getRedScore());
+        }
+        
+        if (game instanceof SimpleGame && game.isGameOver() && !game.getScoredSequences().isEmpty()) {
+            String winner = game.getWinner();
+            if ("Blue".equals(winner)) {
+                blueScoreLabel.setText("Score: 1");
+            } else if ("Red".equals(winner)) {
+                redScoreLabel.setText("Score: 1");
+            }
+        }
+
+        PauseTransition pause = new PauseTransition(Duration.millis(50));
+        pause.setOnFinished(e -> {
+            for (ScoredSequence seq : game.getScoredSequences()) {
+                drawLineBetweenSquares(seq.startRow, seq.startCol, seq.endRow, seq.endCol, seq.player);
+            }
+        });
+        pause.play();
+    }
+
+    private void drawLineBetweenSquares(int r1, int c1, int r2, int c2, String player) {
+        Square start = squares[r1][c1];
+        Square end = squares[r2][c2];
+
+        Bounds startBounds = start.localToParent(start.getBoundsInLocal());
+        Bounds endBounds = end.localToParent(end.getBoundsInLocal());
+
+        double x1 = startBounds.getMinX() + startBounds.getWidth() / 2;
+        double y1 = startBounds.getMinY() + startBounds.getHeight() / 2;
+        double x2 = endBounds.getMinX() + endBounds.getWidth() / 2;
+        double y2 = endBounds.getMinY() + endBounds.getHeight() / 2;
+
+        Line line = new Line(x1, y1, x2, y2);
+        line.setStroke(player.equals("Blue") ? Color.BLUE : Color.RED);
+        line.setStrokeWidth(4);
+        lineLayer.getChildren().add(line);
+    }
+    private class Square extends StackPane {
+        private final int row, col;
+
+        public Square(int row, int col) {
+            this.row = row;
+            this.col = col;
+            setPrefSize(60, 60);
+            setStyle("-fx-border-color: black; -fx-background-color: white;");
+            setOnMouseClicked(e -> handleClick());
+        }
+
+        private void handleClick() {
+            if (game.isGameOver()) return;
+            if (isCurrentPlayerComputer()) return;
+
+            char letter = getSelectedLetterForCurrentPlayer();
+            String player = game.getCurrentPlayer(); // capture before move
+            if (game.makeMove(row, col, letter)) {
+                drawBoard();
+                console.printMove(player, row, col, letter);
+                if (game.isGameOver()) {
+                    gameStatus.setText("Game Over: " + game.getWinner());
+                    console.printWinner(game.getWinner());
+                } else {
+                    gameStatus.setText(game.getCurrentPlayer() + "'s Turn");
+                    if (isCurrentPlayerComputer()) {
+                        PauseTransition aiPause = new PauseTransition(Duration.millis(speedSlider.getValue()));
+                        aiPause.setOnFinished(ev -> makeComputerMove());
+                        aiPause.play();
+                    }
+                }
+            }
+        }
+
+        public void drawCross() {
+            Label label = new Label("S");
+            label.setStyle("-fx-font-size: 24px; -fx-text-fill: black;");
+            getChildren().add(label);
+        }
+
+        public void drawNought() {
+            Label label = new Label("O");
+            label.setStyle("-fx-font-size: 24px; -fx-text-fill: black;");
+            getChildren().add(label);
         }
     }
 
@@ -299,40 +334,25 @@ private class Square extends StackPane {
         }
     }
 
-    public void drawCross() {
-        Label label = new Label("S");
-        label.setStyle("-fx-font-size: 24px; -fx-text-fill: black;");
-        getChildren().add(label);
+    private boolean isCurrentPlayerComputer() {
+        return computerPlayers.containsKey(game.getCurrentPlayer());
     }
 
-    public void drawNought() {
-        Label label = new Label("O");
-        label.setStyle("-fx-font-size: 24px; -fx-text-fill: black;");
-        getChildren().add(label);
-    }
-}
+    private void makeComputerMove() {
+        ComputerPlayer ai = computerPlayers.get(game.getCurrentPlayer());
+        if (ai == null) return;
 
-private boolean isCurrentPlayerComputer() {
-    if (game.getCurrentPlayer().equals("Blue")) {
-        return bluePlayerType.getValue().equals("Computer");
-    } else {
-        return redPlayerType.getValue().equals("Computer");
-    }
-}
-
-private char chooseComputerLetter() {
-    return Math.random() < 0.5 ? 'S' : 'O';
-}
-
-private void makeComputerMove() {
-    List<int[]> moves = game.getAvailableMoves();
-    if (moves.isEmpty()) return;
-
-    int[] move = moves.get((int)(Math.random() * moves.size()));
-    char letter = chooseComputerLetter();
-    if (game.makeMove(move[0], move[1], letter)) {
+        ai.makeMove(game);
         drawBoard();
-        console.printMove(move[0], move[1]);
+
+        int[] lastMove = game.getLastMove();
+        if (lastMove != null) {
+            // AI just moved, so the currentPlayer has already switched — we log the previous player
+            String previousPlayer = game.getCurrentPlayer().equals("Blue") ? "Red" : "Blue";
+            char letter = game.getLastLetter();
+            console.printMove(previousPlayer, lastMove[0], lastMove[1], letter);
+        }
+
         if (game.isGameOver()) {
             gameStatus.setText("Game Over: " + game.getWinner());
             console.printWinner(game.getWinner());
@@ -345,10 +365,8 @@ private void makeComputerMove() {
             }
         }
     }
-}
 
-public static void main(String[] args) {
-    launch(args);
+    public static void main(String[] args) {
+        launch(args);
+    }
 }
-}
-        
