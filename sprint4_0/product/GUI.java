@@ -56,6 +56,7 @@ public class GUI extends Application {
     @Override
     public void start(Stage primaryStage) {
         game = new SimpleGame(gridSize);
+        gridSize = game.getBoard().getSize();
         console = new Console(game.getBoard(), msg -> consoleOutput.appendText(msg + "\n"));
         squares = new Square[gridSize][gridSize];
         drawNewBoard();
@@ -85,12 +86,14 @@ public class GUI extends Application {
 
         radioButton1.setOnAction(e -> {
             game = new SimpleGame(gridSize);
+            gridSize = game.getBoard().getSize();
             console = new Console(game.getBoard(), msg -> consoleOutput.appendText(msg + "\n"));
             drawNewBoard();
         });
 
         radioButton2.setOnAction(e -> {
             game = new GeneralGame(gridSize);
+            gridSize = game.getBoard().getSize();
             console = new Console(game.getBoard(), msg -> consoleOutput.appendText(msg + "\n"));
             drawNewBoard();
         });
@@ -161,8 +164,10 @@ public class GUI extends Application {
         newGameButton.setOnAction(e -> {
             if (radioButton1.isSelected()) {
                 game = new SimpleGame(gridSize);
+                gridSize = game.getBoard().getSize();
             } else {
                 game = new GeneralGame(gridSize);
+                gridSize = game.getBoard().getSize();
             }
             console = new Console(game.getBoard(), msg -> consoleOutput.appendText(msg + "\n"));
             gameStatus.setText("Blue's Turn");
@@ -254,9 +259,11 @@ public class GUI extends Application {
 
         PauseTransition pause = new PauseTransition(Duration.millis(50));
         pause.setOnFinished(e -> {
-            for (ScoredSequence seq : game.getScoredSequences()) {
-                drawLineBetweenSquares(seq.startRow, seq.startCol, seq.endRow, seq.endCol, seq.player);
-            }
+        	for (ScoredSequence seq : game.getScoredSequences()) {
+        	    if (isInBounds(seq.startRow, seq.startCol) && isInBounds(seq.endRow, seq.endCol)) {
+        	        drawLineBetweenSquares(seq.startRow, seq.startCol, seq.endRow, seq.endCol, seq.player);
+        	    }
+        	}
         });
         pause.play();
     }
@@ -364,6 +371,10 @@ public class GUI extends Application {
                 aiPause.play();
             }
         }
+    }
+    
+    private boolean isInBounds(int row, int col) {
+        return row >= 0 && row < gridSize && col >= 0 && col < gridSize;
     }
 
     public static void main(String[] args) {

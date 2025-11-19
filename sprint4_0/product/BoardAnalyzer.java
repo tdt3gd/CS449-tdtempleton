@@ -9,26 +9,52 @@ public class BoardAnalyzer {
         List<ScoredSequence> sequences = new ArrayList<>();
         char[][] grid = board.getGrid();
         int size = board.getSize();
+        char center = grid[row][col];
 
         int[][] directions = {
-            {0, -1}, {0, 1},       // horizontal
-            {-1, 0}, {1, 0},       // vertical
-            {-1, -1}, {1, 1},      // diagonal \
-            {-1, 1}, {1, -1}       // diagonal /
+            {-1, 0}, {1, 0},     // vertical
+            {0, -1}, {0, 1},     // horizontal
+            {-1, -1}, {1, 1},    // diagonal \
+            {-1, 1}, {1, -1}     // diagonal /
         };
 
-        for (int i = 0; i < directions.length; i += 2) {
-            int[] dir1 = directions[i];
-            int[] dir2 = directions[i + 1];
+        for (int[] dir : directions) {
+            int dr = dir[0], dc = dir[1];
 
-            int r1 = row + dir1[0];
-            int c1 = col + dir1[1];
-            int r2 = row + dir2[0];
-            int c2 = col + dir2[1];
-
+            // Case 1: current cell is the middle 'O'
+            int r1 = row - dr, c1 = col - dc;
+            int r2 = row + dr, c2 = col + dc;
             if (isInBounds(r1, c1, size) && isInBounds(r2, c2, size)) {
-                if (grid[r1][c1] == 'S' && grid[row][col] == 'O' && grid[r2][c2] == 'S') {
-                    sequences.add(new ScoredSequence(r1, c1, row, col, r2, c2, player));
+                if (grid[r1][c1] == 'S' && center == 'O' && grid[r2][c2] == 'S') {
+                    if (isCanonical(r1, c1, r2, c2)) {
+                        sequences.add(new ScoredSequence(r1, c1, row, col, r2, c2, player));
+                    }
+                }
+            }
+
+            // Case 2: current cell is the starting 'S'
+            r1 = row + dr;
+            c1 = col + dc;
+            r2 = row + 2 * dr;
+            c2 = col + 2 * dc;
+            if (isInBounds(r1, c1, size) && isInBounds(r2, c2, size)) {
+                if (center == 'S' && grid[r1][c1] == 'O' && grid[r2][c2] == 'S') {
+                    if (isCanonical(row, col, r2, c2)) {
+                        sequences.add(new ScoredSequence(row, col, r1, c1, r2, c2, player));
+                    }
+                }
+            }
+
+            // Case 3: current cell is the ending 'S'
+            r1 = row - dr;
+            c1 = col - dc;
+            r2 = row - 2 * dr;
+            c2 = col - 2 * dc;
+            if (isInBounds(r1, c1, size) && isInBounds(r2, c2, size)) {
+                if (grid[r2][c2] == 'S' && grid[r1][c1] == 'O' && center == 'S') {
+                    if (isCanonical(r2, c2, row, col)) {
+                        sequences.add(new ScoredSequence(r2, c2, r1, c1, row, col, player));
+                    }
                 }
             }
         }
@@ -38,5 +64,10 @@ public class BoardAnalyzer {
 
     private static boolean isInBounds(int row, int col, int size) {
         return row >= 0 && row < size && col >= 0 && col < size;
+    }
+
+    // Only allow one direction per SOS: start must be "less than" end
+    private static boolean isCanonical(int r1, int c1, int r2, int c2) {
+        return (r1 < r2) || (r1 == r2 && c1 < c2);
     }
 }

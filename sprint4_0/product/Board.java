@@ -23,7 +23,7 @@ public class Board {
     }
 
     public boolean placeLetter(int row, int col, char letter) {
-        if (isCellEmpty(row, col)) {
+        if (grid[row][col] == '\0') {
             grid[row][col] = letter;
             return true;
         }

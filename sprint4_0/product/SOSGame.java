@@ -42,6 +42,8 @@ public abstract class SOSGame {
         lastMove = new int[]{row, col};
         lastLetter = letter;
         List<ScoredSequence> newSequences = BoardAnalyzer.checkSOS(board, row, col, currentPlayer);
+        System.out.println("Checking SOS at (" + row + ", " + col + ") for " + currentPlayer);
+        System.out.println("Found " + newSequences.size() + " new sequences.");
         scoredSequences.addAll(newSequences);
         handleScoring(newSequences);
         return true;
