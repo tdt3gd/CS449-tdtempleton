@@ -18,11 +18,12 @@ import java.util.Map;
 
 public class GUI extends Application {
 
+    // --- Core game and console ---
     private SOSGame game;
     private Console console;
 
+    // --- UI controls ---
     private ComboBox<Integer> boardSizeSelector = new ComboBox<>();
-    private Square[][] squares;
     private Label gameStatus = new Label("Blue's Turn");
 
     private RadioButton radioButton1 = new RadioButton("Simple game");
@@ -44,53 +45,49 @@ public class GUI extends Application {
     private Label redScoreLabel = new Label("Score: 0");
 
     private Slider speedSlider = new Slider(100, 1000, 300); // AI speed in ms
-
-    private int gridSize = 8;
-    private GridPane boardPane = new GridPane();
-    private Pane lineLayer = new Pane();
-    private TextArea consoleOutput = new TextArea();
     private Button newGameButton = new Button("New Game");
 
+    // --- Board and drawing ---
+    private int gridSize = 8;
+    private Square[][] squares;
+    private GridPane boardPane = new GridPane();
+    private Pane lineLayer = new Pane();
+
+    // --- Containers used across helpers ---
+    private VBox controlBox = new VBox(10);
+    private StackPane boardStack = new StackPane();
+    private HBox boardRow = new HBox(20);
+    private TextArea consoleOutput = new TextArea();
+
+    // --- AI registry ---
     private Map<String, ComputerPlayer> computerPlayers = new HashMap<>();
 
     @Override
     public void start(Stage primaryStage) {
-        initGame(true); // start with SimpleGame
-        buildUI(primaryStage);
+        initGame();
+        initControls();
+        initBoardUI();
+        initPlayerBoxes();
+        initBottomUI(primaryStage);
     }
 
-    // -------------------- Initialization --------------------
-
-    private void initGame(boolean isSimple) {
-        game = isSimple ? new SimpleGame(gridSize) : new GeneralGame(gridSize);
+    // --- Initialize game and console ---
+    private void initGame() {
+        game = new SimpleGame(gridSize); // default mode
         gridSize = game.getBoard().getSize();
         console = new Console(game.getBoard(), msg -> consoleOutput.appendText(msg + "\n"));
         squares = new Square[gridSize][gridSize];
-        drawNewBoard();
-    }
-    // -------------------- UI Construction --------------------
-
-    private void buildUI(Stage primaryStage) {
-        HBox topRow = buildTopRow();
-        VBox controlBox = buildControlBox(topRow);
-        HBox boardRow = buildBoardRow();
-        VBox bottomBox = buildBottomBox();
-
-        BorderPane borderPane = new BorderPane();
-        borderPane.setTop(controlBox);
-        borderPane.setCenter(boardRow);
-        borderPane.setBottom(bottomBox);
-
-        Scene scene = new Scene(borderPane, 800, 650);
-        primaryStage.setTitle("SOS");
-        primaryStage.setScene(scene);
-        primaryStage.show();
+        this.drawNewBoard();
     }
 
-    private HBox buildTopRow() {
-        HBox topRow = new HBox(20);
-        topRow.setAlignment(Pos.CENTER_LEFT);
-        topRow.setPadding(new Insets(10));
+    // --- Build top row controls ---
+    private void initControls() {
+        boardSizeSelector.getItems().addAll(3, 4, 5, 6, 7, 8);
+        boardSizeSelector.setValue(gridSize);
+        boardSizeSelector.setOnAction(e -> {
+            gridSize = boardSizeSelector.getValue();
+            this.drawNewBoard();
+        });
 
         Label titleLabel = new Label("SOS");
         titleLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
@@ -100,43 +97,51 @@ public class GUI extends Application {
         radioButton2.setToggleGroup(radioBtnGroup);
         radioButton1.setSelected(true);
 
-        radioButton1.setOnAction(e -> initGame(true));
-        radioButton2.setOnAction(e -> initGame(false));
+        radioButton1.setOnAction(e -> {
+            game = new SimpleGame(gridSize);
+            gridSize = game.getBoard().getSize();
+            console = new Console(game.getBoard(), msg -> consoleOutput.appendText(msg + "\n"));
+            this.drawNewBoard();
+        });
 
-        boardSizeSelector.getItems().addAll(3, 4, 5, 6, 7, 8);
-        boardSizeSelector.setValue(gridSize);
-        boardSizeSelector.setOnAction(e -> {
-            gridSize = boardSizeSelector.getValue();
-            drawNewBoard();
+        radioButton2.setOnAction(e -> {
+            game = new GeneralGame(gridSize);
+            gridSize = game.getBoard().getSize();
+            console = new Console(game.getBoard(), msg -> consoleOutput.appendText(msg + "\n"));
+            this.drawNewBoard();
         });
 
         HBox boardSizeBox = new HBox(5, new Label("Board size:"), boardSizeSelector);
+        boardSizeBox.setAlignment(Pos.CENTER_RIGHT);
+
         Region spacer = new Region();
         HBox.setHgrow(spacer, Priority.ALWAYS);
 
-        topRow.getChildren().addAll(titleLabel, radioButton1, radioButton2, spacer, boardSizeBox);
-        return topRow;
-    }
-    private VBox buildControlBox(HBox topRow) {
-        VBox controlBox = new VBox(10);
-        controlBox.setAlignment(Pos.CENTER);
-        controlBox.setPadding(new Insets(10));
+        HBox topRow = new HBox(20, titleLabel, radioButton1, radioButton2, spacer, boardSizeBox);
+        topRow.setAlignment(Pos.CENTER_LEFT);
+        topRow.setPadding(new Insets(10));
 
         Label speedLabel = new Label("AI Speed (ms):");
         speedSlider.setShowTickLabels(true);
         speedSlider.setShowTickMarks(true);
-        speedSlider.setMajorTickUnit(300);
-        speedSlider.setMinorTickCount(2);
-        speedSlider.setBlockIncrement(100);
 
         HBox speedBox = new HBox(10, speedLabel, speedSlider);
         speedBox.setAlignment(Pos.CENTER);
 
         controlBox.getChildren().addAll(topRow, speedBox);
-        return controlBox;
     }
 
-    private HBox buildBoardRow() {
+    // --- Build board UI ---
+    private void initBoardUI() {
+        boardPane.setStyle("-fx-border-color: black; -fx-border-width: 2px;");
+        lineLayer.setPickOnBounds(false);
+
+        boardStack = new StackPane(boardPane, lineLayer);
+        boardStack.setPrefSize(500, 500);
+    }
+
+    // --- Build player panels ---
+    private void initPlayerBoxes() {
         VBox bluePlayerBox = new VBox(10, new Label("Blue Player"), blueS, blueO, bluePlayerType, blueScoreLabel);
         bluePlayerBox.setAlignment(Pos.CENTER);
         blueS.setToggleGroup(bluePlayerGroup);
@@ -153,20 +158,33 @@ public class GUI extends Application {
         redPlayerType.getItems().addAll("Human", "Computer");
         redPlayerType.setValue("Human");
 
-        boardPane.setStyle("-fx-border-color: black; -fx-border-width: 2px;");
-        StackPane boardStack = new StackPane(boardPane, lineLayer);
-        boardStack.setPrefSize(500, 500);
-
-        HBox boardRow = new HBox(20, bluePlayerBox, boardStack, redPlayerBox);
+        boardRow = new HBox(20, bluePlayerBox, boardStack, redPlayerBox);
         boardRow.setAlignment(Pos.CENTER);
         boardRow.setPadding(new Insets(10));
-        return boardRow;
     }
-    private VBox buildBottomBox() {
-        newGameButton.setOnAction(e -> resetGame());
+
+    // --- Build bottom row ---
+    private void initBottomUI(Stage primaryStage) {
+        newGameButton.setOnAction(e -> {
+            game = radioButton1.isSelected() ? new SimpleGame(gridSize) : new GeneralGame(gridSize);
+            console = new Console(game.getBoard(), msg -> consoleOutput.appendText(msg + "\n"));
+            gameStatus.setText("Blue's Turn");
+            consoleOutput.clear();
+            blueScoreLabel.setText("Score: 0");
+            redScoreLabel.setText("Score: 0");
+            squares = new Square[gridSize][gridSize];
+            computerPlayers.clear();
+            if (bluePlayerType.getValue().equals("Computer")) computerPlayers.put("Blue", new RandomComputerPlayer("Blue"));
+            if (redPlayerType.getValue().equals("Computer")) computerPlayers.put("Red", new RandomComputerPlayer("Red"));
+            this.drawNewBoard();
+            if (isCurrentPlayerComputer()) {
+                PauseTransition aiPause = new PauseTransition(Duration.millis(speedSlider.getValue()));
+                aiPause.setOnFinished(ev -> makeComputerMove());
+                aiPause.play();
+            }
+        });
 
         BorderPane bottomRow = new BorderPane();
-        bottomRow.setPadding(new Insets(10));
         bottomRow.setCenter(new HBox(gameStatus));
         bottomRow.setRight(new HBox(newGameButton));
 
@@ -174,85 +192,75 @@ public class GUI extends Application {
         consoleOutput.setPrefHeight(120);
         consoleOutput.setWrapText(true);
 
-        return new VBox(10, bottomRow, consoleOutput);
+        VBox bottomBox = new VBox(10, bottomRow, consoleOutput);
+
+        BorderPane borderPane = new BorderPane();
+        borderPane.setTop(controlBox);
+        borderPane.setCenter(boardRow);
+        borderPane.setBottom(bottomBox);
+
+        Scene scene = new Scene(borderPane, 800, 650);
+        primaryStage.setTitle("SOS");
+        primaryStage.setScene(scene);
+        primaryStage.show();
     }
 
-    // -------------------- Game Reset --------------------
-
-    private void resetGame() {
-        game = radioButton1.isSelected() ? new SimpleGame(gridSize) : new GeneralGame(gridSize);
-        console = new Console(game.getBoard(), msg -> consoleOutput.appendText(msg + "\n"));
-        gameStatus.setText("Blue's Turn");
-        consoleOutput.clear();
-        blueScoreLabel.setText("Score: 0");
-        redScoreLabel.setText("Score: 0");
-        squares = new Square[gridSize][gridSize];
-
-        computerPlayers.clear();
-        if (bluePlayerType.getValue().equals("Computer")) {
-            computerPlayers.put("Blue", new RandomComputerPlayer("Blue"));
-        }
-        if (redPlayerType.getValue().equals("Computer")) {
-            computerPlayers.put("Red", new RandomComputerPlayer("Red"));
-        }
-
-        drawNewBoard();
-        if (isCurrentPlayerComputer()) triggerComputerMove();
-    }
-    // -------------------- Board Rendering --------------------
-
+    // --- Drawing orchestration ---
     public void drawNewBoard() {
-        resetSquares();
+        squares = new Square[gridSize][gridSize];
+        this.drawBoard();
+    }
+
+    public void drawBoard() {
+        clearBoardLayers();
+        drawSquares();
+        updateScores();
+        drawSequences();
+    }
+
+    private void clearBoardLayers() {
         boardPane.getChildren().clear();
         lineLayer.getChildren().clear();
-        populateBoard();
-        updateScores();
-        renderScoredSequences();
     }
 
-    public void resetSquares() {
-        squares = new Square[gridSize][gridSize];
-    }
-
-    private void populateBoard() {
-        for (int row = 0; row < gridSize; row++) {
-            for (int col = 0; col < gridSize; col++) {
-                Square square = createSquare(row, col);
-                char cell = game.getBoard().getCell(row, col);
-                renderCell(square, cell);
+    private void drawSquares() {
+        for (int r = 0; r < gridSize; r++) {
+            for (int c = 0; c < gridSize; c++) {
+                Square square = new Square(r, c);
+                squares[r][c] = square;
+                boardPane.add(square, c, r);
+                char cell = game.getBoard().getCell(r, c);
+                if (cell == 'S') square.drawCross();
+                else if (cell == 'O') square.drawNought();
             }
         }
     }
 
-    public Square createSquare(int row, int col) {
-        Square square = new Square(row, col, this); // pass GUI reference
-        squares[row][col] = square;
-        boardPane.add(square, col, row);
-        return square;
-    }
-
-    public void renderCell(Square square, char cell) {
-        if (cell == 'S') square.drawCross();
-        else if (cell == 'O') square.drawNought();
-    }
-
-    public void updateScores() {
+    private void updateScores() {
         if (game instanceof GeneralGame) {
             blueScoreLabel.setText("Score: " + ((GeneralGame) game).getBlueScore());
             redScoreLabel.setText("Score: " + ((GeneralGame) game).getRedScore());
-        } else if (game instanceof SimpleGame && game.isGameOver() && !game.getScoredSequences().isEmpty()) {
+        }
+        if (game instanceof SimpleGame && game.isGameOver() && !game.getScoredSequences().isEmpty()) {
             String winner = game.getWinner();
-            if ("Blue".equals(winner)) blueScoreLabel.setText("Score: 1");
-            else if ("Red".equals(winner)) redScoreLabel.setText("Score: 1");
+            if ("Blue".equals(winner)) {
+                blueScoreLabel.setText("Score: 1");
+            } else if ("Red".equals(winner)) {
+                redScoreLabel.setText("Score: 1");
+            }
         }
     }
 
-    public void renderScoredSequences() {
-        for (ScoredSequence seq : game.getScoredSequences()) {
-            if (isInBounds(seq.startRow, seq.startCol) && isInBounds(seq.endRow, seq.endCol)) {
-                drawLineBetweenSquares(seq.startRow, seq.startCol, seq.endRow, seq.endCol, seq.player);
+    private void drawSequences() {
+        PauseTransition pause = new PauseTransition(Duration.millis(50));
+        pause.setOnFinished(e -> {
+            for (ScoredSequence seq : game.getScoredSequences()) {
+                if (isInBounds(seq.startRow, seq.startCol) && isInBounds(seq.endRow, seq.endCol)) {
+                    drawLineBetweenSquares(seq.startRow, seq.startCol, seq.endRow, seq.endCol, seq.player);
+                }
             }
-        }
+        });
+        pause.play();
     }
 
     private void drawLineBetweenSquares(int r1, int c1, int r2, int c2, String player) {
@@ -272,9 +280,57 @@ public class GUI extends Application {
         line.setStrokeWidth(4);
         lineLayer.getChildren().add(line);
     }
-    // -------------------- Helpers --------------------
 
-    public char getSelectedLetterForCurrentPlayer() {
+    // --- Square class ---
+    private class Square extends StackPane {
+        private final int row, col;
+
+        public Square(int row, int col) {
+            this.row = row;
+            this.col = col;
+            setPrefSize(60, 60);
+            setStyle("-fx-border-color: black; -fx-background-color: white;");
+            setOnMouseClicked(e -> handleClick());
+        }
+
+        private void handleClick() {
+            if (game.isGameOver()) return;
+            if (isCurrentPlayerComputer()) return;
+
+            char letter = getSelectedLetterForCurrentPlayer();
+            String player = game.getCurrentPlayer();
+            if (game.makeMove(row, col, letter)) {
+                drawBoard();
+                console.printMove(player, row, col, letter);
+                if (game.isGameOver()) {
+                    gameStatus.setText("Game Over: " + game.getWinner());
+                    console.printWinner(game.getWinner());
+                } else {
+                    gameStatus.setText(game.getCurrentPlayer() + "'s Turn");
+                    if (isCurrentPlayerComputer()) {
+                        PauseTransition aiPause = new PauseTransition(Duration.millis(speedSlider.getValue()));
+                        aiPause.setOnFinished(ev -> makeComputerMove());
+                        aiPause.play();
+                    }
+                }
+            }
+        }
+
+        public void drawCross() {
+            Label label = new Label("S");
+            label.setStyle("-fx-font-size: 24px; -fx-text-fill: black;");
+            getChildren().add(label);
+        }
+
+        public void drawNought() {
+            Label label = new Label("O");
+            label.setStyle("-fx-font-size: 24px; -fx-text-fill: black;");
+            getChildren().add(label);
+        }
+    }
+
+    // --- AI helpers ---
+    private char getSelectedLetterForCurrentPlayer() {
         String player = game.getCurrentPlayer();
         if (player.equals("Blue")) {
             return blueS.isSelected() ? 'S' : 'O';
@@ -283,22 +339,16 @@ public class GUI extends Application {
         }
     }
 
-    public boolean isCurrentPlayerComputer() {
+    private boolean isCurrentPlayerComputer() {
         return computerPlayers.containsKey(game.getCurrentPlayer());
     }
 
-    public void triggerComputerMove() {
-        PauseTransition aiPause = new PauseTransition(Duration.millis(speedSlider.getValue()));
-        aiPause.setOnFinished(ev -> makeComputerMove());
-        aiPause.play();
-    }
-
-    public void makeComputerMove() {
+    private void makeComputerMove() {
         ComputerPlayer ai = computerPlayers.get(game.getCurrentPlayer());
         if (ai == null) return;
 
         ai.makeMove(game);
-        drawNewBoard();
+        drawBoard();
 
         int[] lastMove = game.getLastMove();
         if (lastMove != null) {
@@ -312,27 +362,20 @@ public class GUI extends Application {
             console.printWinner(game.getWinner());
         } else {
             gameStatus.setText(game.getCurrentPlayer() + "'s Turn");
-            if (isCurrentPlayerComputer()) triggerComputerMove();
+            if (isCurrentPlayerComputer()) {
+                PauseTransition aiPause = new PauseTransition(Duration.millis(speedSlider.getValue()));
+                aiPause.setOnFinished(ev -> makeComputerMove());
+                aiPause.play();
+            }
         }
     }
 
+    // --- Utility methods ---
     private boolean isInBounds(int row, int col) {
         return row >= 0 && row < gridSize && col >= 0 && col < gridSize;
     }
 
-    // --- Accessors for other classes ---
-    public GridPane getBoardPane() { return boardPane; }
-    public Pane getLineLayer() { return lineLayer; }
-    public int getGridSize() { return gridSize; }
-    public SOSGame getGame() { return game; }
-    public Console getConsole() { return console; }
-    public Label getGameStatus() { return gameStatus; }
-    public Slider getSpeedSlider() { return speedSlider; }
-    public Square[][] getSquares() { return squares; }
-    public TextArea getConsoleOutput() { return consoleOutput; }
-    public void setConsole(Console console) { this.console = console; }
-    public Map<String, ComputerPlayer> getComputerPlayers() { return computerPlayers; }
-
+    // --- Entry point ---
     public static void main(String[] args) {
         launch(args);
     }
