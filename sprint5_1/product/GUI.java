@@ -214,11 +214,15 @@ public class GUI extends Application {
         VBox rightButtons = new VBox(10, replayButton, newGameButton);
         rightButtons.setAlignment(Pos.CENTER_RIGHT);
 
+        // Center the status label properly
+        HBox statusBox = new HBox(gameStatus);
+        statusBox.setAlignment(Pos.CENTER);
+
         BorderPane bottomRow = new BorderPane();
         bottomRow.setPadding(new Insets(10));
-        bottomRow.setLeft(recordGameCheckBox);          // Record Game checkbox (lower left)
-        bottomRow.setCenter(new HBox(gameStatus));      // Status in the center
-        bottomRow.setRight(rightButtons);               // Replay + New Game on the right
+        bottomRow.setLeft(recordGameCheckBox);   // Record Game checkbox (lower left)
+        bottomRow.setCenter(statusBox);          // Centered status label
+        bottomRow.setRight(rightButtons);        // Replay + New Game on the right
 
         consoleOutput.setEditable(false);
         consoleOutput.setPrefHeight(120);
@@ -433,6 +437,8 @@ public class GUI extends Application {
         gameStatus.setText("Replaying...");
 
         int delay = (int) speedSlider.getValue();
+
+        // Schedule each recorded move
         for (int i = 0; i < recordedMoves.size(); i++) {
             MoveRecord move = recordedMoves.get(i);
             PauseTransition pause = new PauseTransition(Duration.millis(delay * (i + 1)));
@@ -443,7 +449,21 @@ public class GUI extends Application {
             });
             pause.play();
         }
+
+        // Schedule final winner announcement after last move
+        PauseTransition finalPause = new PauseTransition(Duration.millis(delay * (recordedMoves.size() + 1)));
+        finalPause.setOnFinished(e -> {
+            if (game.isGameOver()) {
+                String winner = game.getWinner();
+                gameStatus.setText("Game Over: " + winner);
+                console.printWinner(winner);
+            } else {
+                gameStatus.setText("Replay finished (no winner)");
+            }
+        });
+        finalPause.play();
     }
+    
 
     // --- Utility methods ---
     private boolean isInBounds(int row, int col) {
